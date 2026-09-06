@@ -115,6 +115,46 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"  # native USDC on Base mainnet
+BASE_URL = "https://x402-api-catalog.onrender.com"
+
+
+def _resource_descriptor(path: str) -> dict[str, Any]:
+    route = routes[f"GET {path}"]
+    opt = route.accepts[0]
+    return {
+        "resource": f"{BASE_URL}{path}",
+        "type": "http",
+        "method": "GET",
+        "description": route.description,
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": EVM_NETWORK,
+                "asset": USDC_BASE,
+                "amount": "20000",  # $0.02 USDC, 6 decimals
+                "payTo": PAY_TO,
+                "maxTimeoutSeconds": 60,
+            }
+        ],
+    }
+
+
+@app.get("/.well-known/x402")
+async def well_known_x402() -> dict[str, Any]:
+    """x402 discovery descriptor — required by directories/aggregators (agent-tools.cloud,
+    x402scan, Bazaar) that probe this well-known path to verify liveness and list pricing.
+    Its absence (404) is what was marking this service "down" in third-party directories."""
+    return {
+        "x402Version": 1,
+        "resources": [
+            _resource_descriptor("/api/trust-check"),
+            _resource_descriptor("/api/repo-health"),
+            _resource_descriptor("/api/domain-check"),
+        ],
+    }
+
+
 def _payment_info_block(price_usd: str) -> dict[str, Any]:
     return {
         "x-payment-info": {
