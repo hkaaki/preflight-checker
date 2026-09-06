@@ -556,8 +556,11 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
                     _add_check(checks, "well_known_descriptor", True, f"Valid descriptor with {len(descriptor['resources'])} resource(s).")
                     if not candidate_path:
                         first = descriptor["resources"][0]
-                        res_url = first.get("resource", "")
-                        candidate_path = res_url[len(base):] if res_url.startswith(base) else None
+                        # Two real shapes seen in production: an object with a "resource" field
+                        # (our own convention), or a bare URL string (stableenrich.dev's, and
+                        # apparently common) — never assume either without checking.
+                        res_url = first.get("resource", "") if isinstance(first, dict) else (first if isinstance(first, str) else "")
+                        candidate_path = res_url[len(base):] if res_url and res_url.startswith(base) else None
 
     # Check 2: the actual paid endpoint returns a clean 402, not 500/404/200.
     challenge_body: dict | None = None
@@ -576,10 +579,32 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
                 _add_check(checks, "unpaid_request_returns_402", False, f"Could not reach {probe_url}: {_describe_exception(e)}", "Confirm the endpoint path is correct and the service is reachable.")
                 probe_res = None
 
+            # A 405 on GET often just means the route is POST-only (a normal REST pattern for
+            # search/enrich-style endpoints that take a body) — confirmed live against
+            # stableenrich.dev, a real, healthy service that correctly 402s on POST. Always
+            # retry with POST on a 405 rather than gating on an Allow header: many real
+            # deployments (this one included, fronted by Vercel) don't send one at all, so
+            # gating on it silently skips the retry that would have proven the service fine.
+            if probe_res is not None and probe_res.status_code == 405:
+                async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client2:
+                    try:
+                        probe_res = await client2.post(probe_url, json={})
+                    except Exception as e:
+                        _add_check(checks, "unpaid_request_returns_402", False, f"Could not reach {probe_url} via POST: {_describe_exception(e)}")
+                        probe_res = None
+
             if probe_res is not None:
                 if probe_res.status_code == 402:
-                    _add_check(checks, "unpaid_request_returns_402", True, f"GET {candidate_path} correctly returned HTTP 402.")
+                    _add_check(checks, "unpaid_request_returns_402", True, f"{candidate_path} correctly returned HTTP 402.")
                     challenge_body = _extract_challenge(probe_res)
+                elif probe_res.status_code == 405:
+                    _add_check(
+                        checks, "unpaid_request_returns_402", False,
+                        f"GET {candidate_path} returned HTTP 405 (Method Not Allowed) and a POST retry didn't resolve to 402 either.",
+                        "This check currently only probes GET/POST — if this endpoint uses a different "
+                        "method, this result is inconclusive rather than a confirmed bug. Pass the "
+                        "correct method's path, or verify manually.",
+                    )
                 elif probe_res.status_code == 500:
                     _add_check(
                         checks, "unpaid_request_returns_402", False,
@@ -626,10 +651,12 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
                 _add_check(checks, "challenge_well_formed", True, "accepts[0] has every required field.")
 
     # Check 4: descriptor and live challenge agree (catches config drift after a redeploy).
+    # Skipped entirely for descriptors that list bare resource-URL strings (no per-resource
+    # accepts[] to compare against) — that shape has nothing for this check to verify.
     if descriptor and challenge_body and candidate_path:
         desc_accepts = None
         for r in descriptor.get("resources", []):
-            if r.get("resource", "").endswith(candidate_path):
+            if isinstance(r, dict) and r.get("resource", "").endswith(candidate_path):
                 desc_accepts = (r.get("accepts") or [{}])[0]
                 break
         live_accepts = (challenge_body.get("accepts") or [{}])[0]
