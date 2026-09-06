@@ -5,8 +5,12 @@ Endpoints:
   GET /api/trust-check   - npm package trust/risk score (ported from agent-trust-api)
   GET /api/repo-health   - GitHub repo health check
   GET /api/domain-check  - domain DNS/registration liveness check
-All paid at $0.02 USDC on Base mainnet via x402.
+  GET /api/x402-doctor   - audits ANOTHER x402 service for the exact failure modes
+                           we personally diagnosed and fixed on this service tonight
+$0.02 USDC/call for the first 3; $1.00 for x402-doctor. All on Base mainnet via x402.
 """
+import base64
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -105,6 +109,35 @@ routes: dict[str, RouteConfig] = {
             ),
         ),
     ),
+    "GET /api/x402-doctor": RouteConfig(
+        accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$1.00", network=EVM_NETWORK)],
+        mime_type="application/json",
+        description=(
+            "Audits another x402 service for the exact failure modes that cause aggregators "
+            "(agent-tools.cloud, x402scan, Bazaar) to mark it 'down' or make its 402 challenge "
+            "unreadable: missing/invalid /.well-known/x402 descriptor, an unpaid request "
+            "returning 500/404 instead of a clean 402, a malformed or missing payment-required "
+            "challenge, and drift between the descriptor's advertised terms and the live "
+            "challenge. Returns a concrete diagnosis and fix for each failing check, not just "
+            "pass/fail."
+        ),
+        service_name="x402 Doctor",
+        tags=["x402", "diagnostics", "devtools"],
+        extensions=declare_discovery_extension(
+            input={"url": "https://example-service.onrender.com", "path": "/api/some-paid-endpoint"},
+            input_schema={
+                "properties": {
+                    "url": {"type": "string", "description": "base URL of the x402 service to audit"},
+                    "path": {"type": "string", "description": "a specific paid endpoint path to probe; omit to auto-discover from the service's /.well-known/x402"},
+                },
+                "required": ["url"],
+            },
+            output=OutputConfig(
+                example={"url": "https://example-service.onrender.com", "score": 40, "verdict": "broken — aggregators will show this as down", "checks": [], "fixes": []},
+                schema={"properties": {"url": {"type": "string"}, "score": {"type": "number"}, "verdict": {"type": "string"}}},
+            ),
+        ),
+    ),
 }
 
 app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
@@ -117,6 +150,12 @@ async def health() -> dict[str, str]:
 
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"  # native USDC on Base mainnet
 BASE_URL = "https://x402-api-catalog.onrender.com"
+
+
+def _price_to_atomic_units(price: str) -> str:
+    """'$1.00' -> '1000000' (USDC has 6 decimals). Real per-route price, not a hardcoded $0.02."""
+    dollars = float(price.lstrip("$"))
+    return str(round(dollars * 1_000_000))
 
 
 def _resource_descriptor(path: str) -> dict[str, Any]:
@@ -132,7 +171,7 @@ def _resource_descriptor(path: str) -> dict[str, Any]:
                 "scheme": "exact",
                 "network": EVM_NETWORK,
                 "asset": USDC_BASE,
-                "amount": "20000",  # $0.02 USDC, 6 decimals
+                "amount": _price_to_atomic_units(opt.price),
                 "payTo": PAY_TO,
                 "maxTimeoutSeconds": 60,
             }
@@ -151,6 +190,7 @@ async def well_known_x402() -> dict[str, Any]:
             _resource_descriptor("/api/trust-check"),
             _resource_descriptor("/api/repo-health"),
             _resource_descriptor("/api/domain-check"),
+            _resource_descriptor("/api/x402-doctor"),
         ],
     }
 
@@ -208,6 +248,18 @@ async def openapi_x402() -> dict[str, Any]:
                     **_payment_info_block("0.020000"),
                     "parameters": [
                         {"name": "domain", "in": "query", "required": True, "schema": {"type": "string"}},
+                    ],
+                }
+            },
+            "/api/x402-doctor": {
+                "get": {
+                    "operationId": "x402Doctor",
+                    "summary": routes["GET /api/x402-doctor"].description,
+                    "tags": ["Diagnostics"],
+                    **_payment_info_block("1.000000"),
+                    "parameters": [
+                        {"name": "url", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "path", "in": "query", "required": False, "schema": {"type": "string"}},
                     ],
                 }
             },
@@ -412,6 +464,205 @@ async def domain_check(domain: str) -> dict[str, Any]:
             else "partially live" if has_web_presence or has_mail_routing
             else "no DNS records — domain not currently routing anything"
         ),
+    }
+
+
+REQUIRED_ACCEPT_FIELDS = ["scheme", "network", "asset", "amount", "payTo"]
+
+
+def _add_check(checks: list[dict], name: str, passed: bool, detail: str, fix: str | None = None) -> None:
+    checks.append({"check": name, "passed": passed, "detail": detail, "fix": (None if passed else fix)})
+
+
+def _describe_exception(e: Exception) -> str:
+    """httpx's connection errors (ConnectTimeout, ConnectError) frequently have an empty str(e) —
+    fall back to the exception type name so the diagnosis is actually readable."""
+    return str(e) or type(e).__name__
+
+
+def _extract_challenge(res: httpx.Response) -> dict | None:
+    """The 402 challenge lands in different places depending on implementation: some services
+    (e.g. x402-list.com) put accepts[] directly in the JSON body; others (the CDP facilitator's
+    own v2 middleware — confirmed on our own service tonight) return an empty body and carry
+    the whole challenge, base64-encoded, in a payment-required (or X-PAYMENT-REQUIRED) header.
+    A real doctor has to check both, or it wrongly fails every v2-style service."""
+    try:
+        body = res.json()
+    except Exception:
+        body = None
+    if isinstance(body, dict) and isinstance(body.get("accepts"), list) and body["accepts"]:
+        return body
+
+    header_val = res.headers.get("payment-required") or res.headers.get("x-payment-required")
+    if header_val:
+        try:
+            padded = header_val + "=" * (-len(header_val) % 4)
+            decoded = json.loads(base64.b64decode(padded))
+            if isinstance(decoded, dict) and isinstance(decoded.get("accepts"), list):
+                return decoded
+        except Exception:
+            pass
+    return body if isinstance(body, dict) else None
+
+
+@app.get("/api/x402-doctor")
+async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
+    if not url or not re.match(r"^https?://", url):
+        raise HTTPException(status_code=400, detail="url query param is required and must start with http:// or https://")
+    base = url.rstrip("/")
+    checks: list[dict] = []
+    descriptor: dict | None = None
+    candidate_path = path
+
+    # Check 1: /.well-known/x402 exists and is valid.
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        try:
+            wk_res = await client.get(f"{base}/.well-known/x402")
+        except Exception as e:
+            _add_check(
+                checks, "well_known_descriptor", False,
+                f"Could not reach {base}/.well-known/x402: {_describe_exception(e)}",
+                "Confirm the service is actually running and reachable at this base URL, and that DNS/TLS are correctly configured.",
+            )
+            wk_res = None
+
+        if wk_res is not None:
+            if wk_res.status_code != 200:
+                _add_check(
+                    checks, "well_known_descriptor", False,
+                    f"GET /.well-known/x402 returned HTTP {wk_res.status_code}, expected 200.",
+                    "Add a /.well-known/x402 route returning {\"x402Version\": 1, \"resources\": [...]}. "
+                    "Its absence is why most directory aggregators mark a working service 'down' — "
+                    "this was the exact bug found on our own service earlier tonight.",
+                )
+            else:
+                try:
+                    descriptor = wk_res.json()
+                except Exception:
+                    descriptor = None
+                if descriptor is None:
+                    _add_check(
+                        checks, "well_known_descriptor", False,
+                        "GET /.well-known/x402 returned HTTP 200 but the body is not valid JSON.",
+                        "Return a JSON body: {\"x402Version\": 1, \"resources\": [...]}.",
+                    )
+                elif not isinstance(descriptor.get("resources"), list) or not descriptor["resources"]:
+                    _add_check(
+                        checks, "well_known_descriptor", False,
+                        "Descriptor is valid JSON but has no non-empty \"resources\" array.",
+                        "List every paid endpoint under \"resources\", each with resource/type/method/accepts.",
+                    )
+                else:
+                    _add_check(checks, "well_known_descriptor", True, f"Valid descriptor with {len(descriptor['resources'])} resource(s).")
+                    if not candidate_path:
+                        first = descriptor["resources"][0]
+                        res_url = first.get("resource", "")
+                        candidate_path = res_url[len(base):] if res_url.startswith(base) else None
+
+    # Check 2: the actual paid endpoint returns a clean 402, not 500/404/200.
+    challenge_body: dict | None = None
+    if not candidate_path:
+        _add_check(
+            checks, "unpaid_request_returns_402", False,
+            "No endpoint path to probe — pass ?path=/your/endpoint or fix the descriptor so one can be auto-discovered.",
+            "Pass the path param explicitly, or fix the well-known descriptor's resources[0].resource.",
+        )
+    else:
+        probe_url = f"{base}{candidate_path}"
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            try:
+                probe_res = await client.get(probe_url)
+            except Exception as e:
+                _add_check(checks, "unpaid_request_returns_402", False, f"Could not reach {probe_url}: {_describe_exception(e)}", "Confirm the endpoint path is correct and the service is reachable.")
+                probe_res = None
+
+            if probe_res is not None:
+                if probe_res.status_code == 402:
+                    _add_check(checks, "unpaid_request_returns_402", True, f"GET {candidate_path} correctly returned HTTP 402.")
+                    challenge_body = _extract_challenge(probe_res)
+                elif probe_res.status_code == 500:
+                    _add_check(
+                        checks, "unpaid_request_returns_402", False,
+                        f"GET {candidate_path} returned HTTP 500 instead of 402.",
+                        "A 500 on an unpaid request almost always means the facilitator client failed to "
+                        "initialize — check CDP_API_KEY_ID/CDP_API_KEY_SECRET (or equivalent) are current, "
+                        "not stale/rotated credentials. This exact bug hit our own production service "
+                        "tonight: a stale key caused every unpaid request to 500 instead of challenging "
+                        "for payment, invisible unless you read the service's own logs.",
+                    )
+                elif probe_res.status_code == 404:
+                    _add_check(
+                        checks, "unpaid_request_returns_402", False,
+                        f"GET {candidate_path} returned HTTP 404.",
+                        "Either the path is wrong, or the route isn't actually registered under the "
+                        "payment middleware. Confirm the path matches exactly (including any /api prefix) "
+                        "what's advertised in /.well-known/x402.",
+                    )
+                else:
+                    _add_check(
+                        checks, "unpaid_request_returns_402", False,
+                        f"GET {candidate_path} returned HTTP {probe_res.status_code}, expected 402.",
+                        "An unpaid request to a payment-gated route must return exactly 402 Payment Required.",
+                    )
+
+    # Check 3: the 402 challenge itself is well-formed.
+    if challenge_body is not None:
+        accepts = challenge_body.get("accepts")
+        if not isinstance(accepts, list) or not accepts:
+            _add_check(
+                checks, "challenge_well_formed", False,
+                "402 response body has no non-empty \"accepts\" array.",
+                "The 402 body must include accepts: [{scheme, network, asset, amount, payTo, ...}].",
+            )
+        else:
+            missing = [f for f in REQUIRED_ACCEPT_FIELDS if f not in accepts[0]]
+            if missing:
+                _add_check(
+                    checks, "challenge_well_formed", False,
+                    f"accepts[0] is missing required field(s): {', '.join(missing)}.",
+                    f"Every accepts[] entry needs: {', '.join(REQUIRED_ACCEPT_FIELDS)}.",
+                )
+            else:
+                _add_check(checks, "challenge_well_formed", True, "accepts[0] has every required field.")
+
+    # Check 4: descriptor and live challenge agree (catches config drift after a redeploy).
+    if descriptor and challenge_body and candidate_path:
+        desc_accepts = None
+        for r in descriptor.get("resources", []):
+            if r.get("resource", "").endswith(candidate_path):
+                desc_accepts = (r.get("accepts") or [{}])[0]
+                break
+        live_accepts = (challenge_body.get("accepts") or [{}])[0]
+        if desc_accepts is not None:
+            drift = [
+                f for f in ["payTo", "asset", "network"]
+                if desc_accepts.get(f) and live_accepts.get(f) and str(desc_accepts.get(f)).lower() != str(live_accepts.get(f)).lower()
+            ]
+            if drift:
+                _add_check(
+                    checks, "descriptor_matches_live_challenge", False,
+                    f"Descriptor and live 402 challenge disagree on: {', '.join(drift)}.",
+                    "Redeploy so /.well-known/x402 reflects the same payTo/asset/network the live "
+                    "route actually uses — aggregators trust the descriptor and will show buyers "
+                    "stale terms if it drifts from reality.",
+                )
+            else:
+                _add_check(checks, "descriptor_matches_live_challenge", True, "Descriptor matches the live challenge.")
+
+    passed_count = sum(1 for c in checks if c["passed"])
+    score = round(100 * passed_count / len(checks)) if checks else 0
+    verdict = (
+        "healthy — should show correctly on aggregators" if score == 100
+        else "partially broken — some buyers or aggregators will fail" if score >= 50
+        else "broken — aggregators will very likely mark this service down"
+    )
+    return {
+        "url": base,
+        "probed_path": candidate_path,
+        "score": score,
+        "verdict": verdict,
+        "checks": checks,
+        "fixes": [c["fix"] for c in checks if not c["passed"] and c["fix"]],
     }
 
 
