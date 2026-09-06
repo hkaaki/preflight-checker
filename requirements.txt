@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+httpx
+dnspython
+x402[fastapi,evm,svm,extensions]
+cdp-sdk
