@@ -115,21 +115,62 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _payment_info_block(price_usd: str) -> dict[str, Any]:
+    return {
+        "x-payment-info": {
+            "price": {"mode": "fixed", "currency": "USD", "amount": price_usd},
+            "protocols": [{"x402": {}}],
+        },
+        "x-guidance": "Pay via x402 (HTTP 402) on Base mainnet (eip155:8453) to this endpoint's advertised payTo address; see the PAYMENT-REQUIRED response header on an unpaid GET for the exact accepts array.",
+    }
+
+
 @app.get("/openapi-x402.json")
 async def openapi_x402() -> dict[str, Any]:
-    """Machine-readable catalog description for x402 discovery/Bazaar indexing."""
+    """Machine-readable catalog description for x402 discovery/Bazaar indexing (mirrors the pattern proven live on agent-trust-api)."""
     return {
         "openapi": "3.1.0",
         "info": {
             "title": "Ash Ops x402 API Catalog",
             "version": "1.0.0",
-            "description": "Three real, deterministic API checks: npm package trust, GitHub repo health, domain liveness.",
+            "description": "Three real, deterministic API checks: npm package trust, GitHub repo health, domain liveness. All paid at $0.02 USDC on Base mainnet via x402.",
             "contact": {"email": "l.a.mayberg@gmail.com"},
         },
         "paths": {
-            "/api/trust-check": {"get": {"summary": routes["GET /api/trust-check"].description}},
-            "/api/repo-health": {"get": {"summary": routes["GET /api/repo-health"].description}},
-            "/api/domain-check": {"get": {"summary": routes["GET /api/domain-check"].description}},
+            "/api/trust-check": {
+                "get": {
+                    "operationId": "trustCheck",
+                    "summary": routes["GET /api/trust-check"].description,
+                    "tags": ["Trust"],
+                    **_payment_info_block("0.020000"),
+                    "parameters": [
+                        {"name": "package", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "repo", "in": "query", "required": False, "schema": {"type": "string"}},
+                    ],
+                }
+            },
+            "/api/repo-health": {
+                "get": {
+                    "operationId": "repoHealth",
+                    "summary": routes["GET /api/repo-health"].description,
+                    "tags": ["Trust"],
+                    **_payment_info_block("0.020000"),
+                    "parameters": [
+                        {"name": "repo", "in": "query", "required": True, "schema": {"type": "string"}},
+                    ],
+                }
+            },
+            "/api/domain-check": {
+                "get": {
+                    "operationId": "domainCheck",
+                    "summary": routes["GET /api/domain-check"].description,
+                    "tags": ["Trust"],
+                    **_payment_info_block("0.020000"),
+                    "parameters": [
+                        {"name": "domain", "in": "query", "required": True, "schema": {"type": "string"}},
+                    ],
+                }
+            },
         },
     }
 
