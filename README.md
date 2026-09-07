@@ -1,4 +1,4 @@
-# PreFlight
+# PreFlight Checker
 
 Pre-flight checks for autonomous agents — before an agent installs a package, calls another service, or trusts a domain, it runs one of these first. Paid for via [x402](https://x402.org) (HTTP 402 micropayments) on Base mainnet. No signup, no API keys — pay per call in USDC and get your result back in the same request. x402 is the payment rail, not the product; the product is the check itself.
 

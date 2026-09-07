@@ -1,5 +1,5 @@
 """
-PreFlight — pre-flight checks for autonomous agents, paid per call via x402.
+PreFlight Checker — pre-flight checks for autonomous agents, paid per call via x402.
 Before an agent installs a package, calls another service, or trusts a wallet/domain,
 it runs one of these checks first. Grouped into three lines:
   Code checks:    GET /api/trust-check   - npm package trust/risk score
@@ -31,7 +31,7 @@ from x402.server import x402ResourceServer
 from x402.extensions.bazaar.resource_service import declare_discovery_extension, OutputConfig
 from cdp.x402 import create_facilitator_config
 
-app = FastAPI(title="PreFlight")
+app = FastAPI(title="PreFlight Checker")
 
 PAY_TO = "0x9041f8a43D0B43209B9227DE2c7fb25c9FE3847E"  # Ash's CDP wallet, Base mainnet
 CDP_API_KEY_ID = os.environ.get("CDP_API_KEY_ID")
@@ -194,7 +194,7 @@ X402LIST_TOKEN = "x402list-verify-aU5Br5bsvnDU8OM7VxaqwdTWtdCeBuMwtL5N1aSSBkI"
 @app.get("/.well-known/x402list.txt", response_class=PlainTextResponse)
 async def x402list_ownership_token() -> str:
     """One-time domain-ownership proof for x402-list.com's self-serve listing update flow —
-    verifies this update request (rebrand to PreFlight, add x402-doctor endpoint) belongs to
+    verifies this update request (rebrand to PreFlight Checker, add x402-doctor endpoint) belongs to
     the same operator who owns this domain. Token expires 72h after issuance; safe to remove
     after the listing update is confirmed."""
     return X402LIST_TOKEN
@@ -205,7 +205,7 @@ async def api_summary() -> dict[str, Any]:
     """Machine-readable equivalent of the homepage, for anything that wants JSON at a stable path
     instead of parsing HTML."""
     return {
-        "name": "PreFlight",
+        "name": "PreFlight Checker",
         "description": "Pre-flight checks for autonomous agents: verify a package, repo, domain, or x402 service before you trust it. Paid per call in USDC via x402 on Base mainnet, no signup, no API key.",
         "discovery": "https://x402-api-catalog.onrender.com/.well-known/x402",
         "categories": {
@@ -286,7 +286,7 @@ async def openapi_x402() -> dict[str, Any]:
     return {
         "openapi": "3.1.0",
         "info": {
-            "title": "PreFlight",
+            "title": "PreFlight Checker",
             "version": "1.0.0",
             "description": "Pre-flight checks for autonomous agents: npm package trust, GitHub repo health, domain liveness, and x402 service diagnostics. Paid per call via x402 on Base mainnet.",
             "contact": {"email": "l.a.mayberg@gmail.com"},
