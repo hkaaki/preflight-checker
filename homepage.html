@@ -21,7 +21,7 @@
   "name": "x402 API Catalog",
   "description": "Four pay-per-call APIs on Base: npm package trust check, GitHub repo health, domain liveness, and an x402 service diagnostic tool. No signup, no API key, paid in USDC per request.",
   "url": "https://x402-api-catalog.onrender.com/",
-  "documentation": "https://github.com/hkaaki/x402-api-catalog",
+  "documentation": "https://x402-api-catalog.onrender.com/.well-known/x402",
   "provider": {
     "@type": "Organization",
     "name": "x402 API Catalog"
@@ -87,7 +87,7 @@
   }
   h1 .accent{color:var(--amber-deep)}
   .sub{
-    font-size:17px;color:var(--muted);max-width:52ch;margin:0 0 36px;
+    font-size:17px;color:var(--muted);max-width:60ch;margin:0 0 36px;
   }
 
   /* terminal */
@@ -114,6 +114,7 @@
   .terminal-body .code-200{color:#5FBE8C}
   .terminal-body .dim{color:#5A616B}
   .terminal-body .gap{height:12px}
+  .terminal-body .ph{color:var(--amber);border-bottom:1px dashed var(--amber-deep)}
 
   /* sections */
   section{padding:48px 0;border-top:1px solid var(--line)}
@@ -177,27 +178,9 @@
   </div>
 
   <div class="hero">
-    <h1>HTTP built a payment status<br>code in 1997.<span class="accent"> Nobody used it.</span></h1>
-    <p class="sub">Until now. Four real endpoints: npm trust checks, GitHub health, domain audits, and an x402 diagnostic tool. Priced per call in USDC. No signup, no API key, no dashboard. Just a request, a 402, and an answer.</p>
+    <h1>Check before you<span class="accent"> trust it.</span></h1>
+    <p class="sub">If you're building or running an AI agent, it sometimes has to decide whether to trust something before acting on it: a code library it's about to install, another API it's about to call, a website it's about to visit. Four quick checks answer that in seconds, for a few cents each.</p>
 
-    <div class="terminal">
-      <div class="terminal-bar"><span></span><span></span><span></span></div>
-      <div class="terminal-body">
-        <div class="line"><span class="prompt">$</span> <span class="cmd">curl x402-api-catalog.onrender.com/api/trust-check?package=left-pad</span></div>
-        <div class="line"><span class="dim">&lt; HTTP/1.1</span> <span class="code-402">402 Payment Required</span></div>
-        <div class="line"><span class="dim">&lt; payment-required: accepts=[&#123;scheme:"exact", asset:"USDC", amount:"20000", payTo:"0x9041...847E"&#125;]</span></div>
-        <div class="gap"></div>
-        <div class="line"><span class="prompt">$</span> <span class="cmd">curl x402-api-catalog.onrender.com/api/trust-check?package=left-pad \</span></div>
-        <div class="line">  <span class="cmd">-H "PAYMENT-SIGNATURE: &lt;signed&gt;"</span></div>
-        <div class="line"><span class="dim">&lt; HTTP/1.1</span> <span class="code-200">200 OK</span></div>
-        <div class="line"><span class="dim">&lt; &#123;"package":"left-pad","score":70,"verdict":"trustworthy","reasons":[...]&#125;</span></div>
-      </div>
-    </div>
-  </div>
-
-  <section class="plain">
-    <p class="eyebrow">In plain terms</p>
-    <p class="plain-lead">If you're building or running an AI agent, it sometimes has to decide whether to trust something before acting on it: a code library it's about to install, another API it's about to call, a website it's about to visit.</p>
     <div class="plain-grid">
       <div class="plain-item">
         <p class="plain-num">Before you run someone's code</p>
@@ -209,10 +192,24 @@
       </div>
       <div class="plain-item">
         <p class="plain-num">Before you go live yourself</p>
-        <p class="plain-body">If you're running your own x402 service, check why buyers or directories might see it as broken, and get the exact fix.</p>
+        <p class="plain-body">If you're running your own x402 service, find out why buyers or directories might see it as broken, and the exact fix.</p>
       </div>
     </div>
-    <p class="plain-lead" style="margin-top:20px">No subscription, no dashboard to check back on. You pay a few cents per check, only when you actually need one.</p>
+  </div>
+
+  <section>
+    <p class="eyebrow">Try it</p>
+    <p class="plain-lead">Run this, swapping in any real npm package name:</p>
+
+    <div class="terminal">
+      <div class="terminal-bar"><span></span><span></span><span></span></div>
+      <div class="terminal-body">
+        <div class="line"><span class="prompt">$</span> <span class="cmd">curl "x402-api-catalog.onrender.com/api/trust-check?package=<span class="ph">left-pad</span>"</span></div>
+        <div class="gap"></div>
+        <div class="line"><span class="dim">&lt; &#123;"package": "left-pad", "score": 70, "verdict": "trustworthy", "reasons": [...]&#125;</span></div>
+      </div>
+    </div>
+    <p class="plain-lead" style="margin-top:16px">The first response asks for two cents in USDC on Base. Any x402-capable client (like <a href="https://github.com/coinbase/awal">awal</a>) handles that automatically and hands back the real result above.</p>
   </section>
 
   <section>
@@ -252,13 +249,11 @@
     <ul class="checks">
       <li><span class="mark">✓</span><span><strong>Ranks #1</strong> on Coinbase's official x402 Bazaar for "npm package trust check." <span class="label">Check it yourself with any x402-capable client.</span></span></li>
       <li><span class="mark">✓</span><span><strong>Passes Coinbase's official validator.</strong> Every required check, zero failures. <span class="label">api.cdp.coinbase.com/platform/v2/x402/validate</span></span></li>
-      <li><span class="mark">✓</span><span><strong>Open source.</strong> <span class="label">Read the exact code that runs before you send it money.</span></span></li>
+      <li><span class="mark">✓</span><span><strong>Every payment settles on a public blockchain.</strong> <span class="label">Verify any transaction yourself on Basescan, no need to take our word for it.</span></span></li>
     </ul>
   </section>
 
   <footer>
-    <a href="https://github.com/hkaaki/x402-api-catalog">Source on GitHub</a>
-    <span class="sep">·</span>
     <a href="/.well-known/x402">/.well-known/x402</a>
     <span class="sep">·</span>
     <a href="https://x402.org">What is x402</a>

@@ -193,7 +193,6 @@ async def api_summary() -> dict[str, Any]:
     return {
         "name": "x402 API Catalog",
         "description": "Four real x402 (HTTP 402 micropayment) APIs on Base mainnet. No signup, pay per call in USDC.",
-        "docs": "https://github.com/hkaaki/x402-api-catalog",
         "discovery": "https://x402-api-catalog.onrender.com/.well-known/x402",
         "endpoints": {
             "GET /api/trust-check": "$0.02 - npm package trust/risk check",
