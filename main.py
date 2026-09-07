@@ -55,9 +55,9 @@ routes: dict[str, RouteConfig] = {
     "GET /api/trust-check": RouteConfig(
         accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.02", network=EVM_NETWORK)],
         mime_type="application/json",
-        description="npm package trust/risk score: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities.",
+        description="npm package trust check / risk score / security audit: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities.",
         service_name="npm Trust Check",
-        tags=["npm", "security", "trust-score"],
+        tags=["npm", "security", "trust-score", "trust-check", "audit", "verify", "due-diligence"],
         extensions=declare_discovery_extension(
             input={"package": "left-pad", "repo": "left-pad/left-pad"},
             input_schema={
@@ -76,9 +76,9 @@ routes: dict[str, RouteConfig] = {
     "GET /api/repo-health": RouteConfig(
         accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.02", network=EVM_NETWORK)],
         mime_type="application/json",
-        description="GitHub repo health check: stars, forks, open issues, last commit age, archived status, license.",
+        description="GitHub repo health check / audit / verify: stars, forks, open issues, last commit age, archived status, license.",
         service_name="GitHub Repo Health",
-        tags=["github", "code-quality", "due-diligence"],
+        tags=["github", "code-quality", "due-diligence", "repo-check", "audit", "verify", "trust"],
         extensions=declare_discovery_extension(
             input={"repo": "facebook/react"},
             input_schema={
@@ -94,9 +94,9 @@ routes: dict[str, RouteConfig] = {
     "GET /api/domain-check": RouteConfig(
         accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.02", network=EVM_NETWORK)],
         mime_type="application/json",
-        description="Domain liveness check: DNS resolution (A/MX/NS/TXT records), whether mail routing exists, HTTP reachability.",
+        description="Domain liveness check / verify / audit: DNS resolution (A/MX/NS/TXT records), whether mail routing exists, HTTP reachability.",
         service_name="Domain Liveness Check",
-        tags=["dns", "domain", "due-diligence"],
+        tags=["dns", "domain", "due-diligence", "domain-check", "audit", "verify", "liveness"],
         extensions=declare_discovery_extension(
             input={"domain": "example.com"},
             input_schema={
