@@ -3,8 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>x402 API Catalog</title>
-<meta name="description" content="Four real x402 APIs on Base. No signup, no API key. Pay per call in USDC.">
+<title>x402 API Catalog: pay-per-call APIs for AI agents</title>
+<meta name="description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real APIs priced in cents, no signup, no API key. Built for AI agents and the people who run them.">
+<link rel="canonical" href="https://x402-api-catalog.onrender.com/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="x402 API Catalog: pay-per-call APIs for AI agents">
+<meta property="og:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real APIs priced in cents, no signup, no API key.">
+<meta property="og:url" content="https://x402-api-catalog.onrender.com/">
+<meta property="og:site_name" content="x402 API Catalog">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="x402 API Catalog: pay-per-call APIs for AI agents">
+<meta name="twitter:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real APIs priced in cents, no signup, no API key.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebAPI",
+  "name": "x402 API Catalog",
+  "description": "Four pay-per-call APIs on Base: npm package trust check, GitHub repo health, domain liveness, and an x402 service diagnostic tool. No signup, no API key, paid in USDC per request.",
+  "url": "https://x402-api-catalog.onrender.com/",
+  "documentation": "https://github.com/hkaaki/x402-api-catalog",
+  "provider": {
+    "@type": "Organization",
+    "name": "x402 API Catalog"
+  },
+  "offers": [
+    {"@type": "Offer", "name": "npm Trust Check", "price": "0.02", "priceCurrency": "USD"},
+    {"@type": "Offer", "name": "GitHub Repo Health", "price": "0.02", "priceCurrency": "USD"},
+    {"@type": "Offer", "name": "Domain Liveness Check", "price": "0.02", "priceCurrency": "USD"},
+    {"@type": "Offer", "name": "x402 Doctor", "price": "1.00", "priceCurrency": "USD"}
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -93,6 +122,13 @@
     color:var(--muted);margin:0 0 20px;
   }
 
+  /* plain-language section */
+  .plain-lead{font-size:16px;max-width:62ch;margin:0 0 28px;color:var(--ink)}
+  .plain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .plain-num{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--amber-deep);margin:0 0 8px}
+  .plain-body{font-size:14.5px;color:var(--muted);margin:0}
+  @media (max-width:680px){.plain-grid{grid-template-columns:1fr}}
+
   /* endpoints */
   .endpoint{
     display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:baseline;
@@ -158,6 +194,26 @@
       </div>
     </div>
   </div>
+
+  <section class="plain">
+    <p class="eyebrow">In plain terms</p>
+    <p class="plain-lead">If you're building or running an AI agent, it sometimes has to decide whether to trust something before acting on it: a code library it's about to install, another API it's about to call, a website it's about to visit.</p>
+    <div class="plain-grid">
+      <div class="plain-item">
+        <p class="plain-num">Before you run someone's code</p>
+        <p class="plain-body">Check whether an npm package is what it claims to be, not a copycat with a similar name, before your agent installs it.</p>
+      </div>
+      <div class="plain-item">
+        <p class="plain-num">Before you trust another service</p>
+        <p class="plain-body">Check whether a GitHub project is actively maintained, or whether a domain is even live, before you build on top of it.</p>
+      </div>
+      <div class="plain-item">
+        <p class="plain-num">Before you go live yourself</p>
+        <p class="plain-body">If you're running your own x402 service, check why buyers or directories might see it as broken, and get the exact fix.</p>
+      </div>
+    </div>
+    <p class="plain-lead" style="margin-top:20px">No subscription, no dashboard to check back on. You pay a few cents per check, only when you actually need one.</p>
+  </section>
 
   <section>
     <p class="eyebrow">Endpoints</p>

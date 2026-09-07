@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, PlainTextResponse
 
 from x402.http import HTTPFacilitatorClient, PaymentOption
 from x402.http.middleware.fastapi import PaymentMiddlewareASGI
@@ -155,10 +155,25 @@ with open(_HOMEPAGE_PATH, encoding="utf-8") as _f:
 
 @app.get("/", response_class=HTMLResponse)
 async def root() -> str:
-    """A real landing page, not a 404 — several of our own listings (awesome-x402 PR, README,
+    """A real landing page, not a 404. Several of our own listings (awesome-x402 PR, README,
     outreach emails) link people straight to the bare base URL. A human doing diligence before
     trusting an autonomous payment API should see something real, not 'Not Found' or bare JSON."""
     return _HOMEPAGE_HTML
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots() -> str:
+    return "User-agent: *\nAllow: /\nSitemap: https://x402-api-catalog.onrender.com/sitemap.xml\n"
+
+
+@app.get("/sitemap.xml", response_class=PlainTextResponse)
+async def sitemap() -> str:
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        "  <url><loc>https://x402-api-catalog.onrender.com/</loc></url>\n"
+        "</urlset>\n"
+    )
 
 
 @app.get("/api", response_class=JSONResponse)
