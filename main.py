@@ -188,6 +188,18 @@ async def indexnow_key() -> str:
     return INDEXNOW_KEY
 
 
+X402LIST_TOKEN = "x402list-verify-aU5Br5bsvnDU8OM7VxaqwdTWtdCeBuMwtL5N1aSSBkI"
+
+
+@app.get("/.well-known/x402list.txt", response_class=PlainTextResponse)
+async def x402list_ownership_token() -> str:
+    """One-time domain-ownership proof for x402-list.com's self-serve listing update flow —
+    verifies this update request (rebrand to PreFlight, add x402-doctor endpoint) belongs to
+    the same operator who owns this domain. Token expires 72h after issuance; safe to remove
+    after the listing update is confirmed."""
+    return X402LIST_TOKEN
+
+
 @app.get("/api", response_class=JSONResponse)
 async def api_summary() -> dict[str, Any]:
     """Machine-readable equivalent of the homepage, for anything that wants JSON at a stable path
