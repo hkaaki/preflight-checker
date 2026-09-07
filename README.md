@@ -1,16 +1,28 @@
-# x402 API Catalog
+# PreFlight
 
-Four real, working APIs paid for via [x402](https://x402.org) (HTTP 402 micropayments) on Base mainnet. No signup, no API keys — pay per call in USDC and get your result back in the same request.
+Pre-flight checks for autonomous agents — before an agent installs a package, calls another service, or trusts a domain, it runs one of these first. Paid for via [x402](https://x402.org) (HTTP 402 micropayments) on Base mainnet. No signup, no API keys — pay per call in USDC and get your result back in the same request. x402 is the payment rail, not the product; the product is the check itself.
 
 **Live at:** `https://x402-api-catalog.onrender.com`
 
 ## Endpoints
 
+**Code checks**
+
 | Endpoint | Price | What it does |
 |---|---|---|
 | `GET /api/trust-check` | $0.02 | npm package trust/risk check: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities |
 | `GET /api/repo-health` | $0.02 | GitHub repo health check: stars, forks, open issues, last commit age, archived status, license |
+
+**Network checks**
+
+| Endpoint | Price | What it does |
+|---|---|---|
 | `GET /api/domain-check` | $0.02 | Domain liveness check: DNS resolution, mail routing, HTTP reachability |
+
+**Ops checks**
+
+| Endpoint | Price | What it does |
+|---|---|---|
 | `GET /api/x402-doctor` | $1.00 | Audits another x402 service for the common reasons directories mark it "down" — missing discovery descriptor, broken 402 challenge, malformed payment terms — and returns a concrete fix |
 
 ## Example
