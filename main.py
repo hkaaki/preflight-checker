@@ -273,7 +273,7 @@ async def indexnow_key() -> str:
     return INDEXNOW_KEY
 
 
-X402LIST_TOKEN = "x402list-verify-aU5Br5bsvnDU8OM7VxaqwdTWtdCeBuMwtL5N1aSSBkI"
+X402LIST_TOKEN = "x402list-verify-__otTG3KxNeDNKs8-14-3z8Y2Jy9LLkVzL95dphW-74"
 
 
 @app.get("/.well-known/x402list.txt", response_class=PlainTextResponse)
