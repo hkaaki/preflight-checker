@@ -1,14 +1,18 @@
 """
 PreFlight Checker — pre-flight checks for autonomous agents, paid per call via x402.
-Before an agent installs a package, calls another service, or trusts a wallet/domain,
-it runs one of these checks first. Grouped into three lines:
+Before an agent installs a package, calls another service, trusts a wallet/domain, or
+connects to an MCP server, it runs one of these checks first. Grouped into four lines:
   Code checks:    GET /api/trust-check   - npm package trust/risk score
                   GET /api/repo-health   - GitHub repo health check
   Network checks: GET /api/domain-check  - domain DNS/registration liveness check
+  Chain checks:   GET /api/contract-check - EVM token contract safety + impersonation check
   Ops checks:     GET /api/x402-doctor   - audits ANOTHER x402 service for the exact
                                            failure modes we personally diagnosed and
                                            fixed on this service
-$0.02 USDC/call for the first 3; $1.00 for x402-doctor. All on Base mainnet via x402.
+                  GET /api/mcp-audit     - MCP server safety audit: real handshake +
+                                           tool-poisoning/prompt-injection static scan
+$0.02 USDC/call for trust-check/repo-health/domain-check; $0.05 for contract-check;
+$0.06 for mcp-audit; $1.00 for x402-doctor. All on Base mainnet via x402.
 x402 is just the payment rail here, not the product — the product is the check itself.
 """
 import base64
@@ -140,6 +144,59 @@ routes: dict[str, RouteConfig] = {
             ),
         ),
     ),
+    "GET /api/mcp-audit": RouteConfig(
+        accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.06", network=EVM_NETWORK)],
+        mime_type="application/json",
+        description=(
+            "MCP server safety audit: completes a real initialize+tools/list handshake, then "
+            "statically scans every tool's name/description/schema for hidden unicode "
+            "(tool-poisoning), prompt-injection-style phrasing, and tools that quietly combine "
+            "multiple high-privilege capabilities (network+filesystem+exec+credential access). "
+            "If a GitHub repo is supplied, folds in a real software-supply-chain signal too."
+        ),
+        service_name="MCP Server Audit",
+        tags=["mcp", "security", "audit", "tool-poisoning", "prompt-injection", "due-diligence", "verify", "category:ops-checks"],
+        extensions=declare_discovery_extension(
+            input={"url": "https://mcp.example.com/mcp", "repo": "example-org/example-mcp-server"},
+            input_schema={
+                "properties": {
+                    "url": {"type": "string", "description": "base URL of the MCP server (streamable-HTTP transport)"},
+                    "repo": {"type": "string", "description": "optional owner/repo to fold in a GitHub supply-chain signal"},
+                },
+                "required": ["url"],
+            },
+            output=OutputConfig(
+                example={"url": "https://mcp.example.com/mcp", "score": 90, "verdict": "healthy: no red flags found", "tools_found": 3, "findings": []},
+                schema={"properties": {"url": {"type": "string"}, "score": {"type": "number"}, "verdict": {"type": "string"}}},
+            ),
+        ),
+    ),
+    "GET /api/contract-check": RouteConfig(
+        accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.05", network=EVM_NETWORK)],
+        mime_type="application/json",
+        description=(
+            "EVM token contract safety check: honeypot detection, mint/blacklist/pausable/"
+            "self-destruct capability, ownership renouncement, transfer tax, and a real "
+            "token-impersonation check (does the symbol claim to be USDC/WETH/DAI/cbBTC at "
+            "the wrong address — the token equivalent of npm typosquatting)."
+        ),
+        service_name="Contract Safety Check",
+        tags=["evm", "smart-contract", "honeypot", "rug-pull", "impersonation", "security", "audit", "verify", "category:chain-checks"],
+        extensions=declare_discovery_extension(
+            input={"address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "chain": "base"},
+            input_schema={
+                "properties": {
+                    "address": {"type": "string", "description": "0x-prefixed EVM token/contract address"},
+                    "chain": {"type": "string", "description": "base (default), ethereum, polygon, or arbitrum"},
+                },
+                "required": ["address"],
+            },
+            output=OutputConfig(
+                example={"address": "0x...", "score": 85, "verdict": "safe: no red flags found", "reasons": [], "signals": {}},
+                schema={"properties": {"address": {"type": "string"}, "score": {"type": "number"}, "verdict": {"type": "string"}}},
+            ),
+        ),
+    ),
 }
 
 app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
@@ -200,9 +257,19 @@ async def llms_txt() -> str:
         "## Network checks\n"
         "- GET /api/domain-check?domain={domain} — $0.02 — domain liveness: DNS "
         "resolution, mail routing, HTTP reachability.\n\n"
+        "## Chain checks\n"
+        "- GET /api/contract-check?address={0x...}&chain={base} — $0.05 — EVM token "
+        "contract safety: honeypot/mint/blacklist/pausable/self-destruct flags, ownership "
+        "renouncement, transfer tax, and a real token-impersonation check against known "
+        "blue-chip tokens (USDC/WETH/DAI/cbBTC).\n\n"
         "## Ops checks\n"
         "- GET /api/x402-doctor?url={service_url} — $1.00 — audits another x402 service "
-        "for why aggregators mark it 'down' and returns a concrete fix.\n\n"
+        "for why aggregators mark it 'down' and returns a concrete fix.\n"
+        "- GET /api/mcp-audit?url={mcp_server_url}&repo={owner/repo} — $0.06 — MCP server "
+        "safety audit: real initialize+tools/list handshake, static scan for hidden "
+        "unicode/tool-poisoning, prompt-injection-style phrasing, and tools combining "
+        "multiple high-privilege capabilities. Optional repo param folds in a GitHub "
+        "supply-chain signal.\n\n"
         "## Machine-readable references\n"
         "- Discovery descriptor: https://x402-api-catalog.onrender.com/.well-known/x402\n"
         "- OpenAPI: https://x402-api-catalog.onrender.com/openapi-x402.json\n"
@@ -233,7 +300,9 @@ async def pricing() -> str:
         "<tr><td><code>GET /api/trust-check</code></td><td>Code checks</td><td>$0.02</td></tr>"
         "<tr><td><code>GET /api/repo-health</code></td><td>Code checks</td><td>$0.02</td></tr>"
         "<tr><td><code>GET /api/domain-check</code></td><td>Network checks</td><td>$0.02</td></tr>"
+        "<tr><td><code>GET /api/contract-check</code></td><td>Chain checks</td><td>$0.05</td></tr>"
         "<tr><td><code>GET /api/x402-doctor</code></td><td>Ops checks</td><td>$1.00</td></tr>"
+        "<tr><td><code>GET /api/mcp-audit</code></td><td>Ops checks</td><td>$0.06</td></tr>"
         "</table>"
         '<p>See <a href="/.well-known/x402">/.well-known/x402</a> for the machine-readable '
         'price descriptor, or <a href="/">the homepage</a> for a usage example.</p>'
@@ -301,8 +370,12 @@ async def api_summary() -> dict[str, Any]:
             "Network checks": {
                 "GET /api/domain-check": "$0.02 - domain liveness check",
             },
+            "Chain checks": {
+                "GET /api/contract-check": "$0.05 - EVM token contract safety check",
+            },
             "Ops checks": {
                 "GET /api/x402-doctor": "$1.00 - audit another x402 service",
+                "GET /api/mcp-audit": "$0.06 - MCP server safety audit",
             },
         },
     }
@@ -351,6 +424,8 @@ async def well_known_x402() -> dict[str, Any]:
             _resource_descriptor("/api/repo-health"),
             _resource_descriptor("/api/domain-check"),
             _resource_descriptor("/api/x402-doctor"),
+            _resource_descriptor("/api/mcp-audit"),
+            _resource_descriptor("/api/contract-check"),
         ],
     }
 
@@ -420,6 +495,30 @@ async def openapi_x402() -> dict[str, Any]:
                     "parameters": [
                         {"name": "url", "in": "query", "required": True, "schema": {"type": "string"}},
                         {"name": "path", "in": "query", "required": False, "schema": {"type": "string"}},
+                    ],
+                }
+            },
+            "/api/mcp-audit": {
+                "get": {
+                    "operationId": "mcpAudit",
+                    "summary": routes["GET /api/mcp-audit"].description,
+                    "tags": ["Ops checks"],
+                    **_payment_info_block("0.060000"),
+                    "parameters": [
+                        {"name": "url", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "repo", "in": "query", "required": False, "schema": {"type": "string"}},
+                    ],
+                }
+            },
+            "/api/contract-check": {
+                "get": {
+                    "operationId": "contractCheck",
+                    "summary": routes["GET /api/contract-check"].description,
+                    "tags": ["Chain checks"],
+                    **_payment_info_block("0.050000"),
+                    "parameters": [
+                        {"name": "address", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "chain", "in": "query", "required": False, "schema": {"type": "string"}},
                     ],
                 }
             },
@@ -905,6 +1004,355 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
         "verdict": verdict,
         "checks": checks,
         "fixes": [c["fix"] for c in checks if not c["passed"] and c["fix"]],
+    }
+
+
+def _parse_sse_or_json(text: str) -> dict | None:
+    """Real MCP servers respond over the streamable-HTTP transport as text/event-stream even
+    for a single request/response, not plain JSON — confirmed live against mcp.deepwiki.com and
+    docs.mcp.cloudflare.com (both return 'event: message\\ndata: {...}' for a bare POST, no
+    session negotiation required for a single-shot initialize+tools/list). Parse either shape."""
+    text = text.strip()
+    if not text:
+        return None
+    if text.startswith("{") or text.startswith("["):
+        try:
+            return json.loads(text)
+        except Exception:
+            return None
+    last = None
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("data:"):
+            payload = line[len("data:"):].strip()
+            try:
+                last = json.loads(payload)
+            except Exception:
+                continue
+    return last
+
+
+async def _mcp_call(client: httpx.AsyncClient, url: str, method: str, req_id: int, session_id: str | None) -> tuple[dict | None, str | None]:
+    headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+    if session_id:
+        headers["Mcp-Session-Id"] = session_id
+    params: dict[str, Any] = {}
+    if method == "initialize":
+        params = {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "preflight-checker", "version": "1.0"},
+        }
+    try:
+        res = await client.post(url, json={"jsonrpc": "2.0", "id": req_id, "method": method, "params": params}, headers=headers)
+    except Exception:
+        return None, session_id
+    new_session = res.headers.get("mcp-session-id") or session_id
+    return _parse_sse_or_json(res.text), new_session
+
+
+_SUSPICIOUS_UNICODE = re.compile(
+    "[​‌‍‎‏‪‫‬‭‮⁦⁧⁨⁩﻿]"
+)
+
+_INJECTION_PHRASES = [
+    "ignore previous instructions", "ignore all previous", "disregard previous",
+    "you must always", "do not tell the user", "do not mention this",
+    "override your instructions", "act as if you", "your real instructions",
+    "this is a system message",
+]
+
+_CAPABILITY_BUCKETS = {
+    "network": ["fetch", "http request", "curl", "download", "upload", "webhook", "outbound request"],
+    "filesystem": ["filesystem", "read file", "write file", "delete file", "file system"],
+    "exec": ["execute", "eval(", "subprocess", "shell command", "run command", "child_process", "os.system"],
+    "credential": ["password", "secret key", "api key", "private key", "credential", "access token"],
+}
+
+
+def _scan_tool_text(text: str) -> list[str]:
+    """Static risk scan over one tool's name+description+schema. Real, free, deterministic
+    checks for the three tool-poisoning patterns actually documented in the wild: invisible
+    unicode hiding instructions from human review, prompt-injection-style phrasing aimed at
+    the AI reading the tool list (not the human), and a single tool quietly combining multiple
+    high-privilege capabilities (network+filesystem+exec+credential access) that would normally
+    warrant separate scoped permissions."""
+    lower = text.lower()
+    findings = []
+    if _SUSPICIOUS_UNICODE.search(text):
+        findings.append("hidden/invisible unicode characters (zero-width or bidi-control) — a known tool-poisoning technique")
+    hit_phrases = [p for p in _INJECTION_PHRASES if p in lower]
+    if hit_phrases:
+        findings.append(f"prompt-injection-style phrasing: {', '.join(hit_phrases)}")
+    hit_buckets = [name for name, kws in _CAPABILITY_BUCKETS.items() if any(kw in lower for kw in kws)]
+    if len(hit_buckets) >= 2:
+        findings.append(f"combines multiple high-privilege capabilities in one tool: {', '.join(hit_buckets)}")
+    return findings
+
+
+async def _github_signal(client: httpx.AsyncClient, repo: str) -> dict | None:
+    """Minimal, standalone GitHub lookup for mcp-audit's supply-chain signal — deliberately not
+    sharing trust_check's/repo_health's code path so a future change to either never silently
+    breaks this one. Same proven follow_redirects=True fix from the repo-health bug applies."""
+    try:
+        res = await client.get(f"https://api.github.com/repos/{repo}", headers={"User-Agent": "ash-ops-x402-catalog"})
+    except Exception:
+        return None
+    if res.status_code != 200:
+        return None
+    gh = res.json()
+    return {
+        "stars": gh.get("stargazers_count"),
+        "archived": gh.get("archived"),
+        "org_owned": gh.get("owner", {}).get("type") == "Organization",
+    }
+
+
+@app.get("/api/mcp-audit")
+async def mcp_audit(url: str, repo: str | None = None) -> dict[str, Any]:
+    if not url or not re.match(r"^https?://", url):
+        raise HTTPException(status_code=400, detail="url query param is required and must start with http:// or https://")
+
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        init_result, session_id = await _mcp_call(client, url, "initialize", 1, None)
+        reachable = bool(init_result and isinstance(init_result.get("result"), dict))
+        protocol_version = server_name = None
+        tools: list[dict] = []
+        if reachable:
+            protocol_version = init_result["result"].get("protocolVersion")
+            server_name = init_result["result"].get("serverInfo", {}).get("name")
+            list_result, session_id = await _mcp_call(client, url, "tools/list", 2, session_id)
+            if list_result and isinstance(list_result.get("result"), dict):
+                tools = list_result["result"].get("tools", [])
+
+    if not reachable:
+        return {
+            "url": url,
+            "score": 0,
+            "verdict": "unreachable: could not complete an MCP initialize handshake",
+            "checks": [{
+                "check": "mcp_handshake", "passed": False,
+                "detail": "No valid JSON-RPC 'initialize' response (checked both plain-JSON and SSE-formatted bodies).",
+                "fix": "Confirm the URL is the MCP server's base endpoint and it speaks the streamable-HTTP transport (POST JSON-RPC 2.0, Accept: application/json, text/event-stream).",
+            }],
+            "tools_found": 0,
+            "findings": [],
+        }
+
+    checks = [
+        {"check": "mcp_handshake", "passed": True, "detail": f"Reachable, protocol {protocol_version}, server '{server_name}'."},
+        {"check": "tools_list", "passed": True, "detail": f"{len(tools)} tool(s) discovered and scanned."},
+    ]
+
+    per_tool_findings = []
+    unicode_hits = injection_hits = combo_hits = 0
+    for tool in tools:
+        text = " ".join(str(v) for v in [tool.get("name", ""), tool.get("description", ""), json.dumps(tool.get("inputSchema", {}))])
+        tool_findings = _scan_tool_text(text)
+        if tool_findings:
+            per_tool_findings.append({"tool": tool.get("name"), "findings": tool_findings})
+        if any("unicode" in f for f in tool_findings):
+            unicode_hits += 1
+        if any("injection" in f for f in tool_findings):
+            injection_hits += 1
+        if any("combines" in f for f in tool_findings):
+            combo_hits += 1
+
+    findings: list[str] = []
+    score = 100
+    if unicode_hits:
+        score -= 30
+        findings.append(f"{unicode_hits} tool(s) contain hidden/invisible unicode in their description")
+    if injection_hits:
+        score -= min(50, injection_hits * 25)
+        findings.append(f"{injection_hits} tool(s) contain prompt-injection-style phrasing")
+    if combo_hits:
+        score -= min(40, combo_hits * 20)
+        findings.append(f"{combo_hits} tool(s) combine multiple high-privilege capabilities in one call")
+    if not tools:
+        score -= 10
+        findings.append("server exposes zero tools — nothing to audit, or tools/list wasn't implemented correctly")
+
+    supply_chain = None
+    if repo:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            supply_chain = await _github_signal(client, repo)
+        if supply_chain is None:
+            findings.append(f"could not resolve supply-chain signal for repo '{repo}'")
+        else:
+            if supply_chain.get("archived"):
+                score -= 20
+                findings.append("underlying GitHub repo is archived")
+            if (supply_chain.get("stars") or 0) < 10:
+                score -= 10
+                findings.append("underlying GitHub repo has very few stars — unproven")
+
+    score = max(0, min(100, score))
+    verdict = (
+        "healthy: no red flags found" if score >= 80
+        else "review before use: some concerning signals" if score >= 40
+        else "high risk: do not install without manual review"
+    )
+
+    return {
+        "url": url,
+        "server_name": server_name,
+        "protocol_version": protocol_version,
+        "score": score,
+        "verdict": verdict,
+        "checks": checks,
+        "tools_found": len(tools),
+        "findings": findings,
+        "per_tool_findings": per_tool_findings,
+        "supply_chain_signal": supply_chain,
+    }
+
+
+# Curated, individually-verified canonical addresses for Base's most-impersonated blue-chip
+# tokens (cross-checked live against GoPlus's own token_security data before hardcoding — same
+# discipline as the GitHub-redirect bug: never guess a third party's data, verify it first).
+KNOWN_BASE_TOKENS = {
+    "USDC": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "WETH": "0x4200000000000000000000000000000000000006",
+    "DAI": "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
+    "CBBTC": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+}
+
+
+def check_token_impersonation(symbol: str, address: str) -> dict | None:
+    """Flag when a token's declared symbol matches (or is a one-edit near-miss of) a well-known
+    Base blue-chip token but the contract address isn't the genuine one — the token-contract
+    equivalent of npm typosquatting. Reuses the same edit-distance logic as check_typosquat;
+    nobody else in the contract-checker space we researched combines these two ideas."""
+    if not symbol:
+        return None
+    sym_upper = symbol.upper()
+    addr_lower = address.lower()
+    best = None
+    for known_symbol, known_addr in KNOWN_BASE_TOKENS.items():
+        dist = _levenshtein(sym_upper, known_symbol)
+        if dist <= 1 and (best is None or dist < best[1]):
+            best = (known_symbol, dist, known_addr)
+    if best is None:
+        return None
+    known_symbol, dist, known_addr = best
+    if known_addr.lower() == addr_lower:
+        return None  # genuinely the real token
+    return {
+        "impersonates": known_symbol,
+        "real_address": known_addr,
+        "edit_distance": dist,
+        "warning": f"Symbol '{symbol}' matches or nearly matches the real '{known_symbol}' token, but this contract address is not the genuine one ({known_addr}). Likely an impersonation token.",
+    }
+
+
+@app.get("/api/contract-check")
+async def contract_check(address: str, chain: str = "base") -> dict[str, Any]:
+    if not address or not re.match(r"^0x[a-fA-F0-9]{40}$", address):
+        raise HTTPException(status_code=400, detail="address query param is required and must be a valid 0x-prefixed 40-hex-char address")
+
+    chain_ids = {"base": 8453, "ethereum": 1, "polygon": 137, "arbitrum": 42161}
+    chain_id = chain_ids.get(chain.lower())
+    if chain_id is None:
+        raise HTTPException(status_code=400, detail=f"unsupported chain '{chain}', supported: {', '.join(chain_ids)}")
+
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        res = await client.get(
+            f"https://api.gopluslabs.io/api/v1/token_security/{chain_id}",
+            params={"contract_addresses": address},
+        )
+    if res.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"security data provider returned HTTP {res.status_code}")
+
+    data = res.json().get("result", {})
+    info = data.get(address.lower())
+    if not info:
+        return {
+            "address": address,
+            "chain": chain,
+            "score": None,
+            "verdict": "not found: no contract data at this address on this chain (may not be a token contract, or too new to be indexed)",
+            "reasons": [],
+            "signals": {},
+        }
+
+    score = 70
+    reasons: list[str] = []
+
+    def _flag(key: str, penalty: int, label: str) -> None:
+        nonlocal score
+        if str(info.get(key, "0")) == "1":
+            score -= penalty
+            reasons.append(label)
+
+    _flag("is_honeypot", 50, "flagged as a honeypot (cannot sell after buying)")
+    _flag("is_blacklisted", 20, "has a blacklist function that can freeze holders")
+    _flag("hidden_owner", 20, "has a hidden owner address")
+    _flag("can_take_back_ownership", 20, "owner can take back ownership after renouncing")
+    _flag("selfdestruct", 30, "contract can self-destruct")
+    _flag("transfer_pausable", 10, "transfers can be paused by the owner")
+    _flag("is_mintable", 10, "supply is mintable by the owner")
+
+    if str(info.get("is_open_source", "0")) != "1":
+        score -= 25
+        reasons.append("source code is not verified/published")
+    else:
+        score += 10
+        reasons.append("source code is verified")
+
+    owner = (info.get("owner_address") or "").lower()
+    owner_renounced = owner in ("", "0x0000000000000000000000000000000000000000")
+    if owner_renounced:
+        score += 10
+        reasons.append("ownership renounced")
+    elif str(info.get("is_proxy", "0")) == "1":
+        score -= 10
+        reasons.append("upgradeable proxy with an active (non-renounced) owner")
+
+    try:
+        buy_tax = float(info.get("buy_tax") or 0)
+        sell_tax = float(info.get("sell_tax") or 0)
+        if buy_tax > 0.1 or sell_tax > 0.1:
+            score -= 20
+            reasons.append(f"high transfer tax (buy {buy_tax * 100:.1f}%, sell {sell_tax * 100:.1f}%)")
+    except (TypeError, ValueError):
+        pass
+
+    if str(info.get("trust_list", "0")) == "1":
+        score += 20
+        reasons.append("on GoPlus's own trusted blue-chip token list")
+
+    impersonation = check_token_impersonation(info.get("token_symbol", ""), address)
+    if impersonation:
+        score -= 40
+        reasons.append(impersonation["warning"])
+
+    score = max(0, min(100, score))
+    verdict = (
+        "safe: no red flags found" if score >= 70
+        else "review before use: some concerning signals" if score >= 40
+        else "high risk: strong red flags found"
+    )
+
+    return {
+        "address": address,
+        "chain": chain,
+        "token_name": info.get("token_name"),
+        "token_symbol": info.get("token_symbol"),
+        "score": score,
+        "verdict": verdict,
+        "reasons": reasons,
+        "impersonation": impersonation,
+        "signals": {
+            "is_open_source": info.get("is_open_source") == "1",
+            "is_proxy": info.get("is_proxy") == "1",
+            "is_honeypot": info.get("is_honeypot") == "1",
+            "is_mintable": info.get("is_mintable") == "1",
+            "is_blacklisted": info.get("is_blacklisted") == "1",
+            "owner_renounced": owner_renounced,
+            "holder_count": info.get("holder_count"),
+            "on_trusted_list": info.get("trust_list") == "1",
+        },
     }
 
 

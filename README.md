@@ -19,11 +19,18 @@ Pre-flight checks for autonomous agents — before an agent installs a package, 
 |---|---|---|
 | `GET /api/domain-check` | $0.02 | Domain liveness check: DNS resolution, mail routing, HTTP reachability |
 
+**Chain checks**
+
+| Endpoint | Price | What it does |
+|---|---|---|
+| `GET /api/contract-check` | $0.05 | EVM token contract safety check: honeypot/mint/blacklist/pausable/self-destruct flags, ownership renouncement, transfer tax, and a real token-impersonation check against known blue-chip tokens (USDC/WETH/DAI/cbBTC) — the token equivalent of npm typosquat detection |
+
 **Ops checks**
 
 | Endpoint | Price | What it does |
 |---|---|---|
 | `GET /api/x402-doctor` | $1.00 | Audits another x402 service for the common reasons directories mark it "down" — missing discovery descriptor, broken 402 challenge, malformed payment terms — and returns a concrete fix |
+| `GET /api/mcp-audit` | $0.06 | MCP server safety audit: completes a real initialize+tools/list handshake, then statically scans every tool for hidden unicode (tool-poisoning), prompt-injection-style phrasing, and tools combining multiple high-privilege capabilities. Optional `repo` param folds in a GitHub supply-chain signal |
 
 ## Example
 

@@ -4,22 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PreFlight Checker: pre-flight checks for AI agents</title>
-<meta name="description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real checks priced in cents, no signup, no API key. Built for AI agents and the people who run them.">
+<meta name="description" content="Check an npm package, a GitHub repo, a domain, a token contract, or an MCP server before you trust it. Six real checks priced in cents, no signup, no API key. Built for AI agents and the people who run them.">
 <link rel="canonical" href="https://x402-api-catalog.onrender.com/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="PreFlight Checker: pre-flight checks for AI agents">
-<meta property="og:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real checks priced in cents, no signup, no API key.">
+<meta property="og:description" content="Check an npm package, a GitHub repo, a domain, a token contract, or an MCP server before you trust it. Six real checks priced in cents, no signup, no API key.">
 <meta property="og:url" content="https://x402-api-catalog.onrender.com/">
 <meta property="og:site_name" content="PreFlight Checker">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="PreFlight Checker: pre-flight checks for AI agents">
-<meta name="twitter:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real checks priced in cents, no signup, no API key.">
+<meta name="twitter:description" content="Check an npm package, a GitHub repo, a domain, a token contract, or an MCP server before you trust it. Six real checks priced in cents, no signup, no API key.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebAPI",
   "name": "PreFlight Checker",
-  "description": "Pre-flight checks for autonomous agents, grouped into code checks, network checks, and ops checks: npm package trust, GitHub repo health, domain liveness, and x402 service diagnostics. No signup, no API key, paid in USDC per request.",
+  "description": "Pre-flight checks for autonomous agents, grouped into code checks, network checks, chain checks, and ops checks: npm package trust, GitHub repo health, domain liveness, token contract safety, and x402/MCP diagnostics. No signup, no API key, paid in USDC per request.",
   "url": "https://x402-api-catalog.onrender.com/",
   "documentation": "https://x402-api-catalog.onrender.com/.well-known/x402",
   "provider": {
@@ -30,6 +30,8 @@
     {"@type": "Offer", "name": "npm Trust Check", "price": "0.02", "priceCurrency": "USD"},
     {"@type": "Offer", "name": "GitHub Repo Health", "price": "0.02", "priceCurrency": "USD"},
     {"@type": "Offer", "name": "Domain Liveness Check", "price": "0.02", "priceCurrency": "USD"},
+    {"@type": "Offer", "name": "Contract Safety Check", "price": "0.05", "priceCurrency": "USD"},
+    {"@type": "Offer", "name": "MCP Server Audit", "price": "0.06", "priceCurrency": "USD"},
     {"@type": "Offer", "name": "x402 Doctor", "price": "1.00", "priceCurrency": "USD"}
   ]
 }
@@ -243,12 +245,27 @@
       <span class="desc">Domain liveness: DNS resolution, mail routing, HTTP reachability.</span>
     </div>
 
+    <p class="group-label">Chain checks</p>
+    <div class="endpoint">
+      <span class="method">GET</span>
+      <span class="path">/api/contract-check</span>
+      <span class="price">$0.05</span>
+      <span class="desc">EVM token contract safety: honeypot/mint/blacklist/pausable flags, ownership renouncement, transfer tax, and a real token-impersonation check against USDC/WETH/DAI/cbBTC.</span>
+    </div>
+
     <p class="group-label">Ops checks</p>
     <div class="endpoint">
       <span class="method">GET</span>
       <span class="path">/api/x402-doctor</span>
       <span class="price premium">$1.00</span>
       <span class="desc">Audits another x402 service: why aggregators mark it "down," and the exact fix.</span>
+    </div>
+
+    <div class="endpoint">
+      <span class="method">GET</span>
+      <span class="path">/api/mcp-audit</span>
+      <span class="price">$0.06</span>
+      <span class="desc">MCP server safety audit: real initialize+tools/list handshake, static scan for tool-poisoning/prompt-injection, plus an optional GitHub supply-chain signal.</span>
     </div>
   </section>
 
