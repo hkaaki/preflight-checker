@@ -133,7 +133,7 @@ routes: dict[str, RouteConfig] = {
                 "required": ["url"],
             },
             output=OutputConfig(
-                example={"url": "https://example-service.onrender.com", "score": 40, "verdict": "broken — aggregators will show this as down", "checks": [], "fixes": []},
+                example={"url": "https://example-service.onrender.com", "score": 40, "verdict": "broken: aggregators will show this as down", "checks": [], "fixes": []},
                 schema={"properties": {"url": {"type": "string"}, "score": {"type": "number"}, "verdict": {"type": "string"}}},
             ),
         ),
@@ -341,7 +341,7 @@ def check_typosquat(package: str, downloads: int) -> dict | None:
             return {
                 "likely_typosquat_of": target,
                 "edit_distance": dist,
-                "warning": f"'{package}' is very close to the much more popular package '{target}' — verify this is the package you actually meant to install before trusting it.",
+                "warning": f"'{package}' is very close to the much more popular package '{target}'. Verify this is the package you actually meant to install before trusting it.",
             }
     return None
 
@@ -548,7 +548,7 @@ async def domain_check(domain: str) -> dict[str, Any]:
         "verdict": (
             "fully live" if has_mail_routing and has_web_presence and http_reachable
             else "partially live" if has_web_presence or has_mail_routing
-            else "no DNS records — domain not currently routing anything"
+            else "no DNS records, domain not currently routing anything"
         ),
     }
 
@@ -618,7 +618,7 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
                     checks, "well_known_descriptor", False,
                     f"GET /.well-known/x402 returned HTTP {wk_res.status_code}, expected 200.",
                     "Add a /.well-known/x402 route returning {\"x402Version\": 1, \"resources\": [...]}. "
-                    "Its absence is why most directory aggregators mark a working service 'down' — "
+                    "Its absence is why most directory aggregators mark a working service 'down'. "
                     "this was the exact bug found on our own service earlier tonight.",
                 )
             else:
@@ -653,7 +653,7 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
     if not candidate_path:
         _add_check(
             checks, "unpaid_request_returns_402", False,
-            "No endpoint path to probe — pass ?path=/your/endpoint or fix the descriptor so one can be auto-discovered.",
+            "No endpoint path to probe. Pass ?path=/your/endpoint or fix the descriptor so one can be auto-discovered.",
             "Pass the path param explicitly, or fix the well-known descriptor's resources[0].resource.",
         )
     else:
@@ -687,7 +687,7 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
                     _add_check(
                         checks, "unpaid_request_returns_402", False,
                         f"GET {candidate_path} returned HTTP 405 (Method Not Allowed) and a POST retry didn't resolve to 402 either.",
-                        "This check currently only probes GET/POST — if this endpoint uses a different "
+                        "This check currently only probes GET/POST. If this endpoint uses a different "
                         "method, this result is inconclusive rather than a confirmed bug. Pass the "
                         "correct method's path, or verify manually.",
                     )
@@ -696,7 +696,7 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
                         checks, "unpaid_request_returns_402", False,
                         f"GET {candidate_path} returned HTTP 500 instead of 402.",
                         "A 500 on an unpaid request almost always means the facilitator client failed to "
-                        "initialize — check CDP_API_KEY_ID/CDP_API_KEY_SECRET (or equivalent) are current, "
+                        "initialize. Check CDP_API_KEY_ID/CDP_API_KEY_SECRET (or equivalent) are current, "
                         "not stale/rotated credentials. This exact bug hit our own production service "
                         "tonight: a stale key caused every unpaid request to 500 instead of challenging "
                         "for payment, invisible unless you read the service's own logs.",
@@ -756,7 +756,7 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
                     checks, "descriptor_matches_live_challenge", False,
                     f"Descriptor and live 402 challenge disagree on: {', '.join(drift)}.",
                     "Redeploy so /.well-known/x402 reflects the same payTo/asset/network the live "
-                    "route actually uses — aggregators trust the descriptor and will show buyers "
+                    "route actually uses. Aggregators trust the descriptor and will show buyers "
                     "stale terms if it drifts from reality.",
                 )
             else:
@@ -765,9 +765,9 @@ async def x402_doctor(url: str, path: str | None = None) -> dict[str, Any]:
     passed_count = sum(1 for c in checks if c["passed"])
     score = round(100 * passed_count / len(checks)) if checks else 0
     verdict = (
-        "healthy — should show correctly on aggregators" if score == 100
-        else "partially broken — some buyers or aggregators will fail" if score >= 50
-        else "broken — aggregators will very likely mark this service down"
+        "healthy: should show correctly on aggregators" if score == 100
+        else "partially broken: some buyers or aggregators will fail" if score >= 50
+        else "broken: aggregators will very likely mark this service down"
     )
     return {
         "url": base,
