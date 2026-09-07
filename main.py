@@ -517,7 +517,7 @@ async def trust_check(package: str, repo: str | None = None) -> dict[str, Any]:
     if not package or not re.match(r"^[a-zA-Z0-9._@/-]+$", package):
         raise HTTPException(status_code=400, detail="package query param is required and must be a valid npm package name")
 
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
         npm_res = await client.get(f"https://registry.npmjs.org/{package}")
         if npm_res.status_code != 200:
             raise HTTPException(status_code=404, detail=f"npm package '{package}' not found")
@@ -582,7 +582,7 @@ async def repo_health(repo: str) -> dict[str, Any]:
     if not repo or not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo):
         raise HTTPException(status_code=400, detail="repo query param is required, format: owner/repo")
 
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
         gh_res = await client.get(f"https://api.github.com/repos/{repo}", headers={"User-Agent": "ash-ops-x402-catalog"})
         if gh_res.status_code != 200:
             raise HTTPException(status_code=404, detail=f"GitHub repo '{repo}' not found")
