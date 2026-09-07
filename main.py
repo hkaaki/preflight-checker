@@ -178,6 +178,91 @@ async def sitemap() -> str:
     )
 
 
+@app.get("/llms.txt", response_class=PlainTextResponse)
+async def llms_txt() -> str:
+    """llms.txt (llmstxt.org convention) — a plain-language summary for LLMs/AI crawlers
+    doing due diligence on us, same job as robots.txt does for search crawlers. Directory
+    sites like x402-list.com use this to generate an AI-synthesized description instead of
+    showing 'no AI synthesis produced yet'."""
+    return (
+        "# PreFlight Checker\n\n"
+        "> Pre-flight checks for autonomous agents: verify a package, repo, domain, or "
+        "another x402 service before you trust it.\n\n"
+        "PreFlight Checker is a pay-per-call x402 service on Base mainnet. No signup, no "
+        "API key, no subscription — an unpaid GET returns HTTP 402 with the price, pay "
+        "in USDC and the same request returns the real result.\n\n"
+        "## Code checks\n"
+        "- GET /api/trust-check?package={npm_package} — $0.02 — npm package trust/risk "
+        "score: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities, "
+        "typosquat detection.\n"
+        "- GET /api/repo-health?repo={owner/repo} — $0.02 — GitHub repo health: stars, "
+        "forks, open issues, last commit age, archived status, license.\n\n"
+        "## Network checks\n"
+        "- GET /api/domain-check?domain={domain} — $0.02 — domain liveness: DNS "
+        "resolution, mail routing, HTTP reachability.\n\n"
+        "## Ops checks\n"
+        "- GET /api/x402-doctor?url={service_url} — $1.00 — audits another x402 service "
+        "for why aggregators mark it 'down' and returns a concrete fix.\n\n"
+        "## Machine-readable references\n"
+        "- Discovery descriptor: https://x402-api-catalog.onrender.com/.well-known/x402\n"
+        "- OpenAPI: https://x402-api-catalog.onrender.com/openapi-x402.json\n"
+        "- Pricing: https://x402-api-catalog.onrender.com/pricing\n"
+        "- Terms: https://x402-api-catalog.onrender.com/terms\n"
+    )
+
+
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing() -> str:
+    """Standalone pricing page — several directory monitors (x402-list.com's site-pillar
+    checks included) score listings partly on whether a dedicated pricing page exists,
+    separate from the homepage's inline endpoint list."""
+    return (
+        "<!DOCTYPE html><html><head><title>Pricing — PreFlight Checker</title>"
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        "<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:48px auto;"
+        "padding:0 24px;color:#14171A;background:#FAFAF7}"
+        "table{width:100%;border-collapse:collapse;margin:24px 0}"
+        "td,th{text-align:left;padding:10px 8px;border-bottom:1px solid #DEDAD0}"
+        "th{color:#686F78;font-size:13px;text-transform:uppercase;letter-spacing:.04em}"
+        "a{color:#B5621A}code{background:#F0EEE6;padding:2px 6px;border-radius:4px}</style>"
+        "</head><body><h1>Pricing</h1>"
+        "<p>Pay per call in USDC via x402 on Base mainnet. No signup, no API key, no "
+        "subscription — an unpaid request returns HTTP 402 with the exact price; pay it "
+        "and the same request returns the real result.</p>"
+        "<table><tr><th>Endpoint</th><th>Group</th><th>Price</th></tr>"
+        "<tr><td><code>GET /api/trust-check</code></td><td>Code checks</td><td>$0.02</td></tr>"
+        "<tr><td><code>GET /api/repo-health</code></td><td>Code checks</td><td>$0.02</td></tr>"
+        "<tr><td><code>GET /api/domain-check</code></td><td>Network checks</td><td>$0.02</td></tr>"
+        "<tr><td><code>GET /api/x402-doctor</code></td><td>Ops checks</td><td>$1.00</td></tr>"
+        "</table>"
+        '<p>See <a href="/.well-known/x402">/.well-known/x402</a> for the machine-readable '
+        'price descriptor, or <a href="/">the homepage</a> for a usage example.</p>'
+        "</body></html>"
+    )
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms() -> str:
+    return (
+        "<!DOCTYPE html><html><head><title>Terms — PreFlight Checker</title>"
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        "<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:48px auto;"
+        "padding:0 24px;color:#14171A;background:#FAFAF7;line-height:1.6}"
+        "a{color:#B5621A}</style></head><body><h1>Terms</h1>"
+        "<p>PreFlight Checker is provided as-is, without warranty of any kind. Each "
+        "endpoint returns a computed score or check result based on public data sources "
+        "(npm registry, GitHub API, OSV.dev, DNS, HTTP) at the time of the request; "
+        "results are informational and not a guarantee of safety, quality, or fitness "
+        "for any purpose. You are responsible for your own due diligence before acting "
+        "on any result.</p>"
+        "<p>Payment is per successful call, in USDC on Base mainnet via the x402 "
+        "protocol, settled on-chain and non-refundable once the result is returned. "
+        "No account, subscription, or personal data is collected to use this service.</p>"
+        '<p>Contact: <a href="mailto:l.a.mayberg@gmail.com">l.a.mayberg@gmail.com</a></p>'
+        "</body></html>"
+    )
+
+
 INDEXNOW_KEY = "520d3dd83dc7460b972c1c280156afd1"
 
 
