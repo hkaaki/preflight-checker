@@ -55,9 +55,9 @@ routes: dict[str, RouteConfig] = {
     "GET /api/trust-check": RouteConfig(
         accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.02", network=EVM_NETWORK)],
         mime_type="application/json",
-        description="npm package trust check / risk score / security audit: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities.",
+        description="npm package trust check / risk score / security audit: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities, typosquat detection.",
         service_name="npm Trust Check",
-        tags=["npm", "security", "trust-score", "trust-check", "audit", "verify", "due-diligence"],
+        tags=["npm", "security", "trust-score", "trust-check", "audit", "verify", "due-diligence", "typosquat", "supply-chain"],
         extensions=declare_discovery_extension(
             input={"package": "left-pad", "repo": "left-pad/left-pad"},
             input_schema={
@@ -146,6 +146,25 @@ app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/", response_class=JSONResponse)
+async def root() -> dict[str, Any]:
+    """A real landing response, not a 404 — several of our own listings (awesome-x402 PR,
+    README) link people straight to the bare base URL. Someone clicking through should see
+    what this is, not 'Not Found'."""
+    return {
+        "name": "x402 API Catalog",
+        "description": "Four real x402 (HTTP 402 micropayment) APIs on Base mainnet. No signup, pay per call in USDC.",
+        "docs": "https://github.com/hkaaki/x402-api-catalog",
+        "discovery": "https://x402-api-catalog.onrender.com/.well-known/x402",
+        "endpoints": {
+            "GET /api/trust-check": "$0.02 - npm package trust/risk check",
+            "GET /api/repo-health": "$0.02 - GitHub repo health check",
+            "GET /api/domain-check": "$0.02 - domain liveness check",
+            "GET /api/x402-doctor": "$1.00 - audit another x402 service",
+        },
+    }
 
 
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"  # native USDC on Base mainnet
@@ -267,6 +286,54 @@ async def openapi_x402() -> dict[str, Any]:
     }
 
 
+# A curated set of high-value, frequently-typosquatted npm packages — the real, well-documented
+# attack: publish "lodahs" or "expres" hoping a mistyped install pulls malicious code instead of
+# the real package. Comparing against a short, high-value list (not all 2M+ npm packages) keeps
+# this fast and avoids false positives on obscure-but-legitimate names.
+POPULAR_PACKAGES = {
+    "react", "vue", "angular", "express", "lodash", "axios", "chalk", "commander", "webpack",
+    "babel", "eslint", "jest", "mocha", "request", "moment", "uuid", "debug", "colors",
+    "minimist", "yargs", "glob", "semver", "dotenv", "cors", "body-parser", "mongoose",
+    "sequelize", "prisma", "next", "nuxt", "svelte", "tailwindcss", "typescript", "jquery",
+    "bootstrap", "redux", "mobx", "rxjs", "socket.io", "ws", "node-fetch", "form-data",
+    "multer", "passport", "jsonwebtoken", "bcrypt", "nodemailer", "sharp", "puppeteer",
+    "playwright", "cypress", "vitest", "prettier", "husky", "lint-staged", "vite", "rollup",
+    "esbuild", "postcss", "sass", "less", "underscore", "async", "bluebird", "rxjs", "immer",
+    "zod", "yup", "joi", "ajv", "nock", "sinon", "chai", "supertest", "nodemon", "pm2",
+    "winston", "pino", "morgan", "helmet", "compression", "cookie-parser", "express-session",
+    "npm", "yarn", "pnpm", "left-pad", "is-odd", "is-even", "chalk", "figlet", "inquirer",
+}
+
+
+def _levenshtein(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        curr = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            curr[j] = min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + (ca != cb))
+        prev = curr
+    return prev[-1]
+
+
+def check_typosquat(package: str, downloads: int) -> dict | None:
+    """Flag when `package` is a near-miss (edit distance 1-2) of a much more popular package
+    and isn't already a well-known name itself — the classic typosquat shape. Real, free,
+    deterministic; nobody else in the npm-checker space we found tonight does this."""
+    if package.lower() in POPULAR_PACKAGES:
+        return None
+    for target in POPULAR_PACKAGES:
+        dist = _levenshtein(package.lower(), target)
+        if 0 < dist <= 2 and len(target) > 3:
+            return {
+                "likely_typosquat_of": target,
+                "edit_distance": dist,
+                "warning": f"'{package}' is very close to the much more popular package '{target}' — verify this is the package you actually meant to install before trusting it.",
+            }
+    return None
+
+
 def score_npm_signals(age_days: int | None, downloads: int, gh_repo: dict | None, vulns: list[str]) -> dict:
     score = 50
     reasons = []
@@ -340,6 +407,12 @@ async def trust_check(package: str, repo: str | None = None) -> dict[str, Any]:
         vulns = [v["id"] for v in vuln_res.json().get("vulns", [])] if vuln_res.status_code == 200 else []
 
     result = score_npm_signals(age_days, downloads, gh_repo, vulns)
+    typosquat = check_typosquat(package, downloads)
+    if typosquat:
+        result["score"] = max(0, result["score"] - 40)
+        result["verdict"] = "high risk"
+        result["reasons"].append(f"possible typosquat of '{typosquat['likely_typosquat_of']}'")
+
     return {
         "package": package,
         **result,
@@ -358,6 +431,7 @@ async def trust_check(package: str, repo: str | None = None) -> dict[str, Any]:
                 else None
             ),
             "vulnerabilities": {"count": len(vulns), "ids": vulns},
+            "typosquat": typosquat,
         },
     }
 
