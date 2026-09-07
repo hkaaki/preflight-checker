@@ -1,13 +1,15 @@
 """
-Ash Ops x402 API Catalog
-A real, multi-endpoint x402-paid API — not a single isolated listing.
-Endpoints:
-  GET /api/trust-check   - npm package trust/risk score (ported from agent-trust-api)
-  GET /api/repo-health   - GitHub repo health check
-  GET /api/domain-check  - domain DNS/registration liveness check
-  GET /api/x402-doctor   - audits ANOTHER x402 service for the exact failure modes
-                           we personally diagnosed and fixed on this service tonight
+PreFlight — pre-flight checks for autonomous agents, paid per call via x402.
+Before an agent installs a package, calls another service, or trusts a wallet/domain,
+it runs one of these checks first. Grouped into three lines:
+  Code checks:    GET /api/trust-check   - npm package trust/risk score
+                  GET /api/repo-health   - GitHub repo health check
+  Network checks: GET /api/domain-check  - domain DNS/registration liveness check
+  Ops checks:     GET /api/x402-doctor   - audits ANOTHER x402 service for the exact
+                                           failure modes we personally diagnosed and
+                                           fixed on this service
 $0.02 USDC/call for the first 3; $1.00 for x402-doctor. All on Base mainnet via x402.
+x402 is just the payment rail here, not the product — the product is the check itself.
 """
 import base64
 import json
@@ -29,7 +31,7 @@ from x402.server import x402ResourceServer
 from x402.extensions.bazaar.resource_service import declare_discovery_extension, OutputConfig
 from cdp.x402 import create_facilitator_config
 
-app = FastAPI(title="Ash Ops x402 API Catalog")
+app = FastAPI(title="PreFlight")
 
 PAY_TO = "0x9041f8a43D0B43209B9227DE2c7fb25c9FE3847E"  # Ash's CDP wallet, Base mainnet
 CDP_API_KEY_ID = os.environ.get("CDP_API_KEY_ID")
@@ -57,7 +59,7 @@ routes: dict[str, RouteConfig] = {
         mime_type="application/json",
         description="npm package trust check / risk score / security audit: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities, typosquat detection.",
         service_name="npm Trust Check",
-        tags=["npm", "security", "trust-score", "trust-check", "audit", "verify", "due-diligence", "typosquat", "supply-chain"],
+        tags=["npm", "security", "trust-score", "trust-check", "audit", "verify", "due-diligence", "typosquat", "supply-chain", "category:code-checks"],
         extensions=declare_discovery_extension(
             input={"package": "left-pad", "repo": "left-pad/left-pad"},
             input_schema={
@@ -78,7 +80,7 @@ routes: dict[str, RouteConfig] = {
         mime_type="application/json",
         description="GitHub repo health check / audit / verify: stars, forks, open issues, last commit age, archived status, license.",
         service_name="GitHub Repo Health",
-        tags=["github", "code-quality", "due-diligence", "repo-check", "audit", "verify", "trust"],
+        tags=["github", "code-quality", "due-diligence", "repo-check", "audit", "verify", "trust", "category:code-checks"],
         extensions=declare_discovery_extension(
             input={"repo": "facebook/react"},
             input_schema={
@@ -96,7 +98,7 @@ routes: dict[str, RouteConfig] = {
         mime_type="application/json",
         description="Domain liveness check / verify / audit: DNS resolution (A/MX/NS/TXT records), whether mail routing exists, HTTP reachability.",
         service_name="Domain Liveness Check",
-        tags=["dns", "domain", "due-diligence", "domain-check", "audit", "verify", "liveness"],
+        tags=["dns", "domain", "due-diligence", "domain-check", "audit", "verify", "liveness", "category:network-checks"],
         extensions=declare_discovery_extension(
             input={"domain": "example.com"},
             input_schema={
@@ -122,7 +124,7 @@ routes: dict[str, RouteConfig] = {
             "pass/fail."
         ),
         service_name="x402 Doctor",
-        tags=["x402", "diagnostics", "devtools"],
+        tags=["x402", "diagnostics", "devtools", "category:ops-checks"],
         extensions=declare_discovery_extension(
             input={"url": "https://example-service.onrender.com", "path": "/api/some-paid-endpoint"},
             input_schema={
@@ -191,14 +193,20 @@ async def api_summary() -> dict[str, Any]:
     """Machine-readable equivalent of the homepage, for anything that wants JSON at a stable path
     instead of parsing HTML."""
     return {
-        "name": "x402 API Catalog",
-        "description": "Four real x402 (HTTP 402 micropayment) APIs on Base mainnet. No signup, pay per call in USDC.",
+        "name": "PreFlight",
+        "description": "Pre-flight checks for autonomous agents: verify a package, repo, domain, or x402 service before you trust it. Paid per call in USDC via x402 on Base mainnet, no signup, no API key.",
         "discovery": "https://x402-api-catalog.onrender.com/.well-known/x402",
-        "endpoints": {
-            "GET /api/trust-check": "$0.02 - npm package trust/risk check",
-            "GET /api/repo-health": "$0.02 - GitHub repo health check",
-            "GET /api/domain-check": "$0.02 - domain liveness check",
-            "GET /api/x402-doctor": "$1.00 - audit another x402 service",
+        "categories": {
+            "Code checks": {
+                "GET /api/trust-check": "$0.02 - npm package trust/risk check",
+                "GET /api/repo-health": "$0.02 - GitHub repo health check",
+            },
+            "Network checks": {
+                "GET /api/domain-check": "$0.02 - domain liveness check",
+            },
+            "Ops checks": {
+                "GET /api/x402-doctor": "$1.00 - audit another x402 service",
+            },
         },
     }
 
@@ -266,9 +274,9 @@ async def openapi_x402() -> dict[str, Any]:
     return {
         "openapi": "3.1.0",
         "info": {
-            "title": "Ash Ops x402 API Catalog",
+            "title": "PreFlight",
             "version": "1.0.0",
-            "description": "Three real, deterministic API checks: npm package trust, GitHub repo health, domain liveness. All paid at $0.02 USDC on Base mainnet via x402.",
+            "description": "Pre-flight checks for autonomous agents: npm package trust, GitHub repo health, domain liveness, and x402 service diagnostics. Paid per call via x402 on Base mainnet.",
             "contact": {"email": "l.a.mayberg@gmail.com"},
         },
         "paths": {
@@ -276,7 +284,7 @@ async def openapi_x402() -> dict[str, Any]:
                 "get": {
                     "operationId": "trustCheck",
                     "summary": routes["GET /api/trust-check"].description,
-                    "tags": ["Trust"],
+                    "tags": ["Code checks"],
                     **_payment_info_block("0.020000"),
                     "parameters": [
                         {"name": "package", "in": "query", "required": True, "schema": {"type": "string"}},
@@ -288,7 +296,7 @@ async def openapi_x402() -> dict[str, Any]:
                 "get": {
                     "operationId": "repoHealth",
                     "summary": routes["GET /api/repo-health"].description,
-                    "tags": ["Trust"],
+                    "tags": ["Code checks"],
                     **_payment_info_block("0.020000"),
                     "parameters": [
                         {"name": "repo", "in": "query", "required": True, "schema": {"type": "string"}},
@@ -299,7 +307,7 @@ async def openapi_x402() -> dict[str, Any]:
                 "get": {
                     "operationId": "domainCheck",
                     "summary": routes["GET /api/domain-check"].description,
-                    "tags": ["Trust"],
+                    "tags": ["Network checks"],
                     **_payment_info_block("0.020000"),
                     "parameters": [
                         {"name": "domain", "in": "query", "required": True, "schema": {"type": "string"}},
@@ -310,7 +318,7 @@ async def openapi_x402() -> dict[str, Any]:
                 "get": {
                     "operationId": "x402Doctor",
                     "summary": routes["GET /api/x402-doctor"].description,
-                    "tags": ["Diagnostics"],
+                    "tags": ["Ops checks"],
                     **_payment_info_block("1.000000"),
                     "parameters": [
                         {"name": "url", "in": "query", "required": True, "schema": {"type": "string"}},

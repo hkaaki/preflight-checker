@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>x402 API Catalog: pay-per-call APIs for AI agents</title>
-<meta name="description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real APIs priced in cents, no signup, no API key. Built for AI agents and the people who run them.">
+<title>PreFlight: pre-flight checks for AI agents</title>
+<meta name="description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real checks priced in cents, no signup, no API key. Built for AI agents and the people who run them.">
 <link rel="canonical" href="https://x402-api-catalog.onrender.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="x402 API Catalog: pay-per-call APIs for AI agents">
-<meta property="og:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real APIs priced in cents, no signup, no API key.">
+<meta property="og:title" content="PreFlight: pre-flight checks for AI agents">
+<meta property="og:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real checks priced in cents, no signup, no API key.">
 <meta property="og:url" content="https://x402-api-catalog.onrender.com/">
-<meta property="og:site_name" content="x402 API Catalog">
+<meta property="og:site_name" content="PreFlight">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="x402 API Catalog: pay-per-call APIs for AI agents">
-<meta name="twitter:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real APIs priced in cents, no signup, no API key.">
+<meta name="twitter:title" content="PreFlight: pre-flight checks for AI agents">
+<meta name="twitter:description" content="Check an npm package, a GitHub repo, or a domain before you trust it. Four real checks priced in cents, no signup, no API key.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebAPI",
-  "name": "x402 API Catalog",
-  "description": "Four pay-per-call APIs on Base: npm package trust check, GitHub repo health, domain liveness, and an x402 service diagnostic tool. No signup, no API key, paid in USDC per request.",
+  "name": "PreFlight",
+  "description": "Pre-flight checks for autonomous agents, grouped into code checks, network checks, and ops checks: npm package trust, GitHub repo health, domain liveness, and x402 service diagnostics. No signup, no API key, paid in USDC per request.",
   "url": "https://x402-api-catalog.onrender.com/",
   "documentation": "https://x402-api-catalog.onrender.com/.well-known/x402",
   "provider": {
     "@type": "Organization",
-    "name": "x402 API Catalog"
+    "name": "PreFlight"
   },
   "offers": [
     {"@type": "Offer", "name": "npm Trust Check", "price": "0.02", "priceCurrency": "USD"},
@@ -131,6 +131,11 @@
   @media (max-width:680px){.plain-grid{grid-template-columns:1fr}}
 
   /* endpoints */
+  .group-label{
+    font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--amber-deep);margin:24px 0 4px;
+  }
+  .group-label:first-of-type{margin-top:0}
   .endpoint{
     display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:baseline;
     padding:18px 0;border-bottom:1px solid var(--line);
@@ -173,7 +178,7 @@
 
 <div class="wrap">
   <div class="statusbar">
-    <span class="brand">x402-api-catalog</span>
+    <span class="brand">PreFlight</span>
     <span><span class="dot"></span>live on Base mainnet</span>
   </div>
 
@@ -215,6 +220,7 @@
   <section>
     <p class="eyebrow">Endpoints</p>
 
+    <p class="group-label">Code checks</p>
     <div class="endpoint">
       <span class="method">GET</span>
       <span class="path">/api/trust-check</span>
@@ -229,6 +235,7 @@
       <span class="desc">GitHub repo health: stars, forks, open issues, last commit age, archived status, license.</span>
     </div>
 
+    <p class="group-label">Network checks</p>
     <div class="endpoint">
       <span class="method">GET</span>
       <span class="path">/api/domain-check</span>
@@ -236,6 +243,7 @@
       <span class="desc">Domain liveness: DNS resolution, mail routing, HTTP reachability.</span>
     </div>
 
+    <p class="group-label">Ops checks</p>
     <div class="endpoint">
       <span class="method">GET</span>
       <span class="path">/api/x402-doctor</span>
