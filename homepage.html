@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x402 API Catalog</title>
+<meta name="description" content="Four real x402 APIs on Base. No signup, no API key — pay per call in USDC.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAFAF7;
+    --paper-dim:#F0EEE6;
+    --ink:#14171A;
+    --muted:#686F78;
+    --amber:#D97B29;
+    --amber-deep:#B5621A;
+    --green:#1F7A4D;
+    --line:#DEDAD0;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--amber-deep)}
+  a:hover{color:var(--amber)}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+  .wrap{max-width:840px;margin:0 auto;padding:0 24px}
+
+  /* status bar */
+  .statusbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 0;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:13px;color:var(--muted);
+  }
+  .statusbar .brand{color:var(--ink);font-weight:600;letter-spacing:.02em}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;
+    box-shadow:0 0 0 3px rgba(31,122,77,.15)}
+
+  /* hero */
+  .hero{padding:64px 0 40px}
+  h1{
+    font-family:var(--mono);
+    font-size:clamp(28px,5vw,42px);
+    font-weight:600;
+    line-height:1.15;
+    margin:0 0 14px;
+    letter-spacing:-0.01em;
+  }
+  h1 .accent{color:var(--amber-deep)}
+  .sub{
+    font-size:17px;color:var(--muted);max-width:52ch;margin:0 0 36px;
+  }
+
+  /* terminal */
+  .terminal{
+    background:var(--ink);
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 32px -12px rgba(0,0,0,.25);
+  }
+  .terminal-bar{
+    display:flex;align-items:center;gap:7px;
+    padding:11px 14px;background:#1E2226;
+  }
+  .terminal-bar span{width:10px;height:10px;border-radius:50%;background:#3A3F45}
+  .terminal-body{
+    font-family:var(--mono);font-size:13px;line-height:1.7;
+    padding:20px 22px 24px;color:#D9DCE0;
+    overflow-x:auto;
+  }
+  .terminal-body .line{white-space:pre-wrap;word-break:break-word}
+  .terminal-body .prompt{color:#7C8590}
+  .terminal-body .cmd{color:#F2F0EA}
+  .terminal-body .code-402{color:var(--amber)}
+  .terminal-body .code-200{color:#5FBE8C}
+  .terminal-body .dim{color:#5A616B}
+  .terminal-body .gap{height:12px}
+
+  /* sections */
+  section{padding:48px 0;border-top:1px solid var(--line)}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 20px;
+  }
+
+  /* endpoints */
+  .endpoint{
+    display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:baseline;
+    padding:18px 0;border-bottom:1px solid var(--line);
+  }
+  .endpoint:last-child{border-bottom:none}
+  .endpoint .path{font-family:var(--mono);font-size:14.5px;font-weight:500}
+  .endpoint .method{font-family:var(--mono);font-size:11px;color:var(--green);font-weight:600}
+  .endpoint .desc{grid-column:1 / -1;font-size:14.5px;color:var(--muted);margin-top:2px}
+  .endpoint .price{font-family:var(--mono);font-size:14.5px;font-weight:600;white-space:nowrap}
+  .endpoint .price.premium{color:var(--amber-deep)}
+
+  /* verified */
+  .checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+  .checks li{display:flex;gap:12px;align-items:flex-start;font-size:15px}
+  .checks .mark{
+    flex:none;width:20px;height:20px;border-radius:50%;background:var(--green);
+    color:var(--paper);font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;margin-top:1px;
+  }
+  .checks .label{color:var(--muted)}
+
+  footer{
+    padding:32px 0 48px;
+    font-family:var(--mono);font-size:12.5px;color:var(--muted);
+    display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;
+  }
+  footer a{color:var(--muted)}
+  footer a:hover{color:var(--amber-deep)}
+  .sep{color:var(--line)}
+
+  @media (max-width:520px){
+    .endpoint{grid-template-columns:1fr auto}
+    .endpoint .method{grid-row:1;grid-column:1}
+    .endpoint .price{grid-row:1;grid-column:2}
+    .endpoint .path{grid-row:2;grid-column:1/-1}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="statusbar">
+    <span class="brand">x402-api-catalog</span>
+    <span><span class="dot"></span>live on Base mainnet</span>
+  </div>
+
+  <div class="hero">
+    <h1>Four real APIs.<br>Pay in USDC.<span class="accent"> No signup.</span></h1>
+    <p class="sub">A working example of the internet's oldest unused HTTP status code, finally doing its job. Send a request, get a 402, pay it, get your answer — in the same call.</p>
+
+    <div class="terminal">
+      <div class="terminal-bar"><span></span><span></span><span></span></div>
+      <div class="terminal-body">
+        <div class="line"><span class="prompt">$</span> <span class="cmd">curl x402-api-catalog.onrender.com/api/trust-check?package=left-pad</span></div>
+        <div class="line"><span class="dim">&lt; HTTP/1.1</span> <span class="code-402">402 Payment Required</span></div>
+        <div class="line"><span class="dim">&lt; payment-required: accepts=[&#123;scheme:"exact", asset:"USDC", amount:"20000", payTo:"0x9041...847E"&#125;]</span></div>
+        <div class="gap"></div>
+        <div class="line"><span class="prompt">$</span> <span class="cmd">curl x402-api-catalog.onrender.com/api/trust-check?package=left-pad \</span></div>
+        <div class="line">  <span class="cmd">-H "PAYMENT-SIGNATURE: &lt;signed&gt;"</span></div>
+        <div class="line"><span class="dim">&lt; HTTP/1.1</span> <span class="code-200">200 OK</span></div>
+        <div class="line"><span class="dim">&lt; &#123;"package":"left-pad","score":70,"verdict":"trustworthy","reasons":[...]&#125;</span></div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <p class="eyebrow">Endpoints</p>
+
+    <div class="endpoint">
+      <span class="method">GET</span>
+      <span class="path">/api/trust-check</span>
+      <span class="price">$0.02</span>
+      <span class="desc">npm package trust check: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities, typosquat detection.</span>
+    </div>
+
+    <div class="endpoint">
+      <span class="method">GET</span>
+      <span class="path">/api/repo-health</span>
+      <span class="price">$0.02</span>
+      <span class="desc">GitHub repo health: stars, forks, open issues, last commit age, archived status, license.</span>
+    </div>
+
+    <div class="endpoint">
+      <span class="method">GET</span>
+      <span class="path">/api/domain-check</span>
+      <span class="price">$0.02</span>
+      <span class="desc">Domain liveness: DNS resolution, mail routing, HTTP reachability.</span>
+    </div>
+
+    <div class="endpoint">
+      <span class="method">GET</span>
+      <span class="path">/api/x402-doctor</span>
+      <span class="price premium">$1.00</span>
+      <span class="desc">Audits another x402 service — why aggregators mark it "down," and the exact fix.</span>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Verified, not claimed</p>
+    <ul class="checks">
+      <li><span class="mark">✓</span><span><strong>Ranks #1</strong> on Coinbase's official x402 Bazaar for "npm package trust check" — <span class="label">check it yourself with any x402-capable client.</span></span></li>
+      <li><span class="mark">✓</span><span><strong>Passes Coinbase's official validator</strong> — every required check, zero failures. <span class="label">api.cdp.coinbase.com/platform/v2/x402/validate</span></span></li>
+      <li><span class="mark">✓</span><span><strong>Open source.</strong> <span class="label">Read the exact code that runs before you send it money.</span></span></li>
+    </ul>
+  </section>
+
+  <footer>
+    <a href="https://github.com/hkaaki/x402-api-catalog">Source on GitHub</a>
+    <span class="sep">·</span>
+    <a href="/.well-known/x402">/.well-known/x402</a>
+    <span class="sep">·</span>
+    <a href="https://x402.org">What is x402</a>
+  </footer>
+</div>
+
+</body>
+</html>

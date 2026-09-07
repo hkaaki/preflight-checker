@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from x402.http import HTTPFacilitatorClient, PaymentOption
 from x402.http.middleware.fastapi import PaymentMiddlewareASGI
@@ -148,11 +148,23 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/", response_class=JSONResponse)
-async def root() -> dict[str, Any]:
-    """A real landing response, not a 404 — several of our own listings (awesome-x402 PR,
-    README) link people straight to the bare base URL. Someone clicking through should see
-    what this is, not 'Not Found'."""
+_HOMEPAGE_PATH = os.path.join(os.path.dirname(__file__), "homepage.html")
+with open(_HOMEPAGE_PATH, encoding="utf-8") as _f:
+    _HOMEPAGE_HTML = _f.read()
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root() -> str:
+    """A real landing page, not a 404 — several of our own listings (awesome-x402 PR, README,
+    outreach emails) link people straight to the bare base URL. A human doing diligence before
+    trusting an autonomous payment API should see something real, not 'Not Found' or bare JSON."""
+    return _HOMEPAGE_HTML
+
+
+@app.get("/api", response_class=JSONResponse)
+async def api_summary() -> dict[str, Any]:
+    """Machine-readable equivalent of the homepage, for anything that wants JSON at a stable path
+    instead of parsing HTML."""
     return {
         "name": "x402 API Catalog",
         "description": "Four real x402 (HTTP 402 micropayment) APIs on Base mainnet. No signup, pay per call in USDC.",
