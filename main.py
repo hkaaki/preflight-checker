@@ -176,6 +176,16 @@ async def sitemap() -> str:
     )
 
 
+INDEXNOW_KEY = "520d3dd83dc7460b972c1c280156afd1"
+
+
+@app.get(f"/{INDEXNOW_KEY}.txt", response_class=PlainTextResponse)
+async def indexnow_key() -> str:
+    """IndexNow ownership proof — Bing/Yandex verify a submitted URL belongs to us by checking
+    this exact file exists at the site root before accepting the submission."""
+    return INDEXNOW_KEY
+
+
 @app.get("/api", response_class=JSONResponse)
 async def api_summary() -> dict[str, Any]:
     """Machine-readable equivalent of the homepage, for anything that wants JSON at a stable path
