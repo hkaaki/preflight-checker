@@ -62,7 +62,7 @@ routes: dict[str, RouteConfig] = {
         accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.02", network=EVM_NETWORK)],
         mime_type="application/json",
         description="npm package trust check / risk score / security audit: registry age, weekly downloads, GitHub org/stars, OSV.dev vulnerabilities, typosquat detection.",
-        service_name="npm Trust Check",
+        service_name="PreFlight Checker",
         tags=["npm", "security", "trust-score", "trust-check", "audit", "verify", "due-diligence", "typosquat", "supply-chain", "category:code-checks"],
         extensions=declare_discovery_extension(
             input={"package": "left-pad", "repo": "left-pad/left-pad"},
@@ -83,7 +83,7 @@ routes: dict[str, RouteConfig] = {
         accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.02", network=EVM_NETWORK)],
         mime_type="application/json",
         description="GitHub repo health check / audit / verify: stars, forks, open issues, last commit age, archived status, license.",
-        service_name="GitHub Repo Health",
+        service_name="PreFlight Checker",
         tags=["github", "code-quality", "due-diligence", "repo-check", "audit", "verify", "trust", "category:code-checks"],
         extensions=declare_discovery_extension(
             input={"repo": "facebook/react"},
@@ -101,7 +101,7 @@ routes: dict[str, RouteConfig] = {
         accepts=[PaymentOption(scheme="exact", pay_to=PAY_TO, price="$0.02", network=EVM_NETWORK)],
         mime_type="application/json",
         description="Domain liveness check / verify / audit: DNS resolution (A/MX/NS/TXT records), whether mail routing exists, HTTP reachability.",
-        service_name="Domain Liveness Check",
+        service_name="PreFlight Checker",
         tags=["dns", "domain", "due-diligence", "domain-check", "audit", "verify", "liveness", "category:network-checks"],
         extensions=declare_discovery_extension(
             input={"domain": "example.com"},
@@ -127,7 +127,7 @@ routes: dict[str, RouteConfig] = {
             "challenge. Returns a concrete diagnosis and fix for each failing check, not just "
             "pass/fail."
         ),
-        service_name="x402 Doctor",
+        service_name="PreFlight Checker",
         tags=["x402", "diagnostics", "devtools", "category:ops-checks"],
         extensions=declare_discovery_extension(
             input={"url": "https://example-service.onrender.com", "path": "/api/some-paid-endpoint"},
@@ -154,7 +154,7 @@ routes: dict[str, RouteConfig] = {
             "multiple high-privilege capabilities (network+filesystem+exec+credential access). "
             "If a GitHub repo is supplied, folds in a real software-supply-chain signal too."
         ),
-        service_name="MCP Server Audit",
+        service_name="PreFlight Checker",
         tags=["mcp", "security", "audit", "tool-poisoning", "prompt-injection", "due-diligence", "verify", "category:ops-checks"],
         extensions=declare_discovery_extension(
             input={"url": "https://mcp.example.com/mcp", "repo": "example-org/example-mcp-server"},
@@ -180,7 +180,7 @@ routes: dict[str, RouteConfig] = {
             "token-impersonation check (does the symbol claim to be USDC/WETH/DAI/cbBTC at "
             "the wrong address — the token equivalent of npm typosquatting)."
         ),
-        service_name="Contract Safety Check",
+        service_name="PreFlight Checker",
         tags=["evm", "smart-contract", "honeypot", "rug-pull", "impersonation", "security", "audit", "verify", "category:chain-checks"],
         extensions=declare_discovery_extension(
             input={"address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "chain": "base"},
